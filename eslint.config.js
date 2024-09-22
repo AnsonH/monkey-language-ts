@@ -5,7 +5,7 @@ import vitest from "@vitest/eslint-plugin";
 
 export default tseslint.config(
   {
-    ignores: ["lib", "node_modules", "pnpm-lock.yaml", "**/*.snap"],
+    ignores: ["bin", "lib", "node_modules", "pnpm-lock.yaml", "**/*.snap"],
   },
   {
     linterOptions: {
