@@ -1,6 +1,7 @@
 import eslint from "@eslint/js";
 import n from "eslint-plugin-n";
 import tseslint from "typescript-eslint";
+import vitest from "@vitest/eslint-plugin";
 
 export default tseslint.config(
   {
@@ -49,6 +50,20 @@ export default tseslint.config(
         "error",
         { allowModules: ["monkey-language-ts"] },
       ],
+    },
+  },
+  {
+    files: ["**/*.test.*"],
+    languageOptions: {
+      globals: vitest.environments.env.globals,
+    },
+    plugins: { vitest },
+    rules: {
+      ...vitest.configs.recommended.rules,
+
+      // These on-by-default rules aren't useful in test files.
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
     },
   },
 );
