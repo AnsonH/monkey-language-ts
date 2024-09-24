@@ -22,6 +22,7 @@ function isDigit(ch: string): boolean {
  * Lexer tokenizes an input string into a sequence of tokens.
  *
  * Limitations:
+ * - Identifiers can only be alphabet letters (a-z, A-Z) and underscores.
  * - It only supports parsing ASCII characters. UTF-8 is not supported since
  *  characters could be multiple bytes long.
  * - Floats, hexadecimals, and octal numbers are not supported.
