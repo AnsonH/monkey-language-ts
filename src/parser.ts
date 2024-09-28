@@ -1,13 +1,56 @@
 import {
+  BooleanLiteral,
+  Expression,
+  ExpressionStatement,
   Identifier,
+  InfixExpression,
+  IntegerLiteral,
   LetStatement,
+  PrefixExpression,
   Program,
   ReturnStatement,
   Statement,
 } from "./ast.js";
-import { ParseError, UnexpectedTokenError } from "./error.js";
+import {
+  NoPrefixParseFunctionError,
+  ParseError,
+  UnexpectedTokenError,
+} from "./error.js";
 import Lexer from "./lexer.js";
 import { Token, TokenType } from "./token.js";
+
+/**
+ * Parses a prefix operator of `<prefix operator><expression>` (e.g. `-5`).
+ */
+type PrefixParseFn = () => Expression;
+
+/**
+ * Parses an infix operator, which sits between two operands (e.g. `5 + 10`).
+ *
+ * `this.currentToken` should be at the operator when it is called.
+ */
+type InfixParseFn = (left: Expression) => Expression;
+
+enum Precedence {
+  Lowest = 1,
+  Equals, // ==
+  LessGreater, // < or >
+  Sum, // +
+  Product, // *
+  Prefix, // -X or !X
+  Call, // myFunction(X)
+}
+
+const precedences = new Map<TokenType, Precedence>([
+  [TokenType.Equal, Precedence.Equals],
+  [TokenType.NotEqual, Precedence.Equals],
+  [TokenType.LessThan, Precedence.LessGreater],
+  [TokenType.GreaterThan, Precedence.LessGreater],
+  [TokenType.Plus, Precedence.Sum],
+  [TokenType.Minus, Precedence.Sum],
+  [TokenType.Slash, Precedence.Product],
+  [TokenType.Asterisk, Precedence.Product],
+]);
 
 /**
  * A recursive descent parser (aka Pratt parser).
@@ -17,14 +60,39 @@ import { Token, TokenType } from "./token.js";
  */
 class Parser {
   lexer: Lexer;
+  private errors: ParseError[] = [];
+
   private currentToken: Token;
   private peekToken: Token;
-  private errors: ParseError[] = [];
+
+  private readonly prefixParseFns: Map<TokenType, PrefixParseFn>;
+  private readonly infixParseFns: Map<TokenType, InfixParseFn> = new Map();
 
   constructor(lexer: Lexer) {
     this.lexer = lexer;
     this.currentToken = this.lexer.getNextToken();
     this.peekToken = this.lexer.getNextToken();
+
+    this.prefixParseFns = new Map<TokenType, PrefixParseFn>([
+      [TokenType.Ident, this.parseIdentifier.bind(this)],
+      [TokenType.Int, this.parseIntegerLiteral.bind(this)],
+      [TokenType.Bang, this.parsePrefixExpression.bind(this)],
+      [TokenType.Minus, this.parsePrefixExpression.bind(this)],
+      [TokenType.True, this.parseBoolean.bind(this)],
+      [TokenType.False, this.parseBoolean.bind(this)],
+      [TokenType.LParen, this.parseGroupedExpression.bind(this)],
+    ]);
+
+    this.infixParseFns = new Map<TokenType, InfixParseFn>([
+      [TokenType.Plus, this.parseInfixExpression.bind(this)],
+      [TokenType.Minus, this.parseInfixExpression.bind(this)],
+      [TokenType.Slash, this.parseInfixExpression.bind(this)],
+      [TokenType.Asterisk, this.parseInfixExpression.bind(this)],
+      [TokenType.Equal, this.parseInfixExpression.bind(this)],
+      [TokenType.NotEqual, this.parseInfixExpression.bind(this)],
+      [TokenType.LessThan, this.parseInfixExpression.bind(this)],
+      [TokenType.GreaterThan, this.parseInfixExpression.bind(this)],
+    ]);
   }
 
   parseProgram(): Program {
@@ -72,6 +140,14 @@ class Parser {
     this.peekToken = this.lexer.getNextToken();
   }
 
+  private getCurrentPrecedence(): Precedence {
+    return precedences.get(this.currentToken.type) ?? Precedence.Lowest;
+  }
+
+  private getPeekPrecedence(): Precedence {
+    return precedences.get(this.peekToken.type) ?? Precedence.Lowest;
+  }
+
   private parseStatement(): Statement | null {
     switch (this.currentToken.type) {
       case TokenType.Let:
@@ -79,8 +155,23 @@ class Parser {
       case TokenType.Return:
         return this.parseReturnStatement();
       default:
-        return null;
+        return this.parseExpressionStatement();
     }
+  }
+
+  /**
+   * Parses an expression statement. Semicolons are optional.
+   */
+  private parseExpressionStatement(): ExpressionStatement {
+    // Use lowest precedence since we didn't parse anything yet and we can't
+    // compare precedences.
+    const expression = this.parseExpression(Precedence.Lowest);
+
+    if (this.isPeekToken(TokenType.Semicolon)) {
+      this.nextToken();
+    }
+
+    return { type: "ExpressionStatement", expression };
   }
 
   /**
@@ -98,36 +189,129 @@ class Parser {
     };
 
     if (!this.expectPeek(TokenType.Assign)) {
+      this.errors.push(
+        new UnexpectedTokenError(TokenType.Assign, this.peekToken.type),
+      );
       return null;
     }
 
-    // TODO: We're skipping the expressions until we encounter a semicolon
-    while (!this.isCurrentToken(TokenType.Semicolon)) {
-      this.nextToken();
-    }
+    this.nextToken(); // Consume `=`, so currentToken sits on expression
+    const value = this.parseExpression(Precedence.Lowest);
 
-    return {
-      type: "LetStatement",
-      name,
-      value: null, // TODO
-    };
+    return { type: "LetStatement", name, value };
   }
 
   /**
    * Parses `return <expression>;`, with current token sitting on `TokenType.Return`.
    */
-  private parseReturnStatement(): ReturnStatement | null {
-    this.nextToken();
+  private parseReturnStatement(): ReturnStatement {
+    this.nextToken(); // Consume `return`
 
-    // TODO: We're skipping the expressions until we encounter a semicolon
-    while (!this.isCurrentToken(TokenType.Semicolon)) {
+    const returnValue = this.parseExpression(Precedence.Lowest);
+
+    if (this.isPeekToken(TokenType.Semicolon)) {
       this.nextToken();
     }
 
+    return { type: "ReturnStatement", returnValue };
+  }
+
+  /**
+   * Pratt parsing for expressions.
+   */
+  private parseExpression(precedence: Precedence): Expression {
+    const prefixFn = this.prefixParseFns.get(this.currentToken.type);
+    if (!prefixFn) {
+      this.errors.push(new NoPrefixParseFunctionError(this.currentToken.type));
+      // @ts-ignore
+      return null;
+    }
+    let leftExp: Expression = prefixFn();
+
+    while (
+      !this.isPeekToken(TokenType.Semicolon) &&
+      /**
+       * If peek operator has higher precedence, associate currentToken with R.H.S.
+       * so that currentToken is the left operand of peek operator.
+       *
+       * parseExpression(Precedence.Sum):
+       *     A  +  B  *  C
+       *           ^
+       *           currentToken
+       *
+       * Since `* > +`, `B` becomes left operand of `*` -> `A + (B * C)`.
+       */
+      precedence < this.getPeekPrecedence()
+    ) {
+      const infixFn = this.infixParseFns.get(this.peekToken.type);
+      if (!infixFn) {
+        return leftExp;
+      }
+
+      this.nextToken();
+
+      // Associate currentToken with R.H.S., so it becomes the left operand of
+      // the peek operator
+      leftExp = infixFn(leftExp);
+    }
+
+    return leftExp;
+  }
+
+  private parseBoolean(): BooleanLiteral {
     return {
-      type: "ReturnStatement",
-      returnValue: null, // TODO
+      type: "BooleanLiteral",
+      value: this.isCurrentToken(TokenType.True),
     };
+  }
+
+  private parseGroupedExpression(): Expression {
+    this.nextToken(); // Consume `(`
+
+    // Using lowest precedence ensures the whole expression inside `( )` is parsed
+    // as a single node
+    const expression = this.parseExpression(Precedence.Lowest);
+
+    if (!this.expectPeek(TokenType.RParen)) {
+      this.errors.push(
+        new UnexpectedTokenError(TokenType.RBrace, this.peekToken.type),
+      );
+      // @ts-ignore
+      return null;
+    }
+
+    return expression;
+  }
+
+  private parseIdentifier(): Identifier {
+    return { type: "Identifier", value: this.currentToken.literal };
+  }
+
+  private parseInfixExpression(left: Expression): InfixExpression {
+    const operator = this.currentToken.literal;
+    const precedence = this.getCurrentPrecedence();
+    this.nextToken();
+
+    // To make an operator right-associative, try `this.parseExpression(precedence-1)`
+    // Right-associative means `a + b + c` = `(a + (b + c))`
+    const right = this.parseExpression(precedence);
+
+    return { type: "InfixExpression", operator, left, right };
+  }
+
+  private parseIntegerLiteral(): IntegerLiteral {
+    return {
+      type: "IntegerLiteral",
+      value: parseInt(this.currentToken.literal, 10),
+    };
+  }
+
+  private parsePrefixExpression(): PrefixExpression {
+    const operator = this.currentToken.literal;
+    this.nextToken(); // Consumes prefix operator -> `currentToken` lands on expression
+    const right = this.parseExpression(Precedence.Prefix);
+
+    return { type: "PrefixExpression", operator, right };
   }
 }
 

@@ -1,6 +1,7 @@
 import readline from "readline";
 import Lexer from "./lexer.js";
-import { TokenType } from "./token.js";
+import Parser from "./parser.js";
+import print from "./printer.js";
 
 const PROMPT = ">> ";
 
@@ -17,14 +18,15 @@ export function startRepl() {
 
   rl.on("line", (input) => {
     const lexer = new Lexer(input);
+    const parser = new Parser(lexer);
 
-    while (true) {
-      const token = lexer.getNextToken();
-      console.log(token);
-      if (token.type === TokenType.Eof) {
-        break;
-      }
+    const program = parser.parseProgram();
+    if (parser.getErrors().length > 0) {
+      parser.getErrors().forEach((error) => console.log(error.message));
+      return;
     }
+
+    console.log(print(program));
 
     process.stdout.write(PROMPT);
   });
