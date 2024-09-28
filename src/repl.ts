@@ -20,13 +20,12 @@ export function startRepl() {
     const lexer = new Lexer(input);
     const parser = new Parser(lexer);
 
-    const program = parser.parseProgram();
-    if (parser.getErrors().length > 0) {
-      parser.getErrors().forEach((error) => console.log(error.message));
-      return;
+    try {
+      const program = parser.parseProgram();
+      console.log(print(program));
+    } catch (e) {
+      console.error((e as Error).message);
     }
-
-    console.log(print(program));
 
     process.stdout.write(PROMPT);
   });

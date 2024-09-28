@@ -10,41 +10,39 @@ function parseProgram(input: string): [Program, Parser] {
   return [parser.parseProgram(), parser];
 }
 
-function expectNoParseErrors(parser: Parser) {
-  expect(parser.getErrors()).toEqual([]);
-}
+describe("let statements", () => {
+  test("valid let statements", () => {
+    const input = `let x = 5;
+  let foobar = 838383;`;
 
-test("valid let statements", () => {
-  const input = `let x = 5;
-let y = 10;
-let foobar = 838383;`;
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "LetStatement",
+          name: { type: "Identifier", value: "x" },
+          value: { type: "IntegerLiteral", value: 5 },
+        },
+        {
+          type: "LetStatement",
+          name: { type: "Identifier", value: "foobar" },
+          value: { type: "IntegerLiteral", value: 838383 },
+        },
+      ],
+    });
+  });
 
-  const [program] = parseProgram(input);
-  expect(program).toEqual<Program>({
-    type: "Program",
-    statements: [
-      {
-        type: "LetStatement",
-        name: { type: "Identifier", value: "x" },
-        value: null, // TODO: Fix value
-      },
-      {
-        type: "LetStatement",
-        name: { type: "Identifier", value: "y" },
-        value: null,
-      },
-      {
-        type: "LetStatement",
-        name: { type: "Identifier", value: "foobar" },
-        value: null,
-      },
-    ],
+  test("invalid test statements", () => {
+    const invalidInputs = ["let x 5;", "let = 5;", "let x = "];
+    invalidInputs.forEach((input) => {
+      expect(() => parseProgram(input)).toThrowError();
+    });
   });
 });
 
-test("valid return statements", () => {
+test("return statements", () => {
   const input = `return 5;
-return 10;
 return 993322;`;
 
   const [program] = parseProgram(input);
@@ -53,15 +51,11 @@ return 993322;`;
     statements: [
       {
         type: "ReturnStatement",
-        returnValue: null, // TODO: Fix returnValue
+        returnValue: { type: "IntegerLiteral", value: 5 },
       },
       {
         type: "ReturnStatement",
-        returnValue: null,
-      },
-      {
-        type: "ReturnStatement",
-        returnValue: null,
+        returnValue: { type: "IntegerLiteral", value: 993322 },
       },
     ],
   });
@@ -70,8 +64,7 @@ return 993322;`;
 test("identifier expressions", () => {
   const input = `foobar;`;
 
-  const [program, parser] = parseProgram(input);
-  expectNoParseErrors(parser);
+  const [program] = parseProgram(input);
   expect(program).toEqual<Program>({
     type: "Program",
     statements: [
@@ -86,8 +79,7 @@ test("identifier expressions", () => {
 test("integer literal expressions", () => {
   const input = "5;";
 
-  const [program, parser] = parseProgram(input);
-  expectNoParseErrors(parser);
+  const [program] = parseProgram(input);
   expect(program).toEqual<Program>({
     type: "Program",
     statements: [
@@ -102,8 +94,7 @@ test("integer literal expressions", () => {
 test("prefix expressions", () => {
   const input = "!5; -15; !true; !false;";
 
-  const [program, parser] = parseProgram(input);
-  expectNoParseErrors(parser);
+  const [program] = parseProgram(input);
   expect(program).toEqual<Program>({
     type: "Program",
     statements: [
@@ -143,6 +134,7 @@ test("prefix expressions", () => {
   });
 });
 
+// TODO: Use Vitest snapshots
 describe("infix operators", () => {
   const cases = [
     { input: "5 + 5", description: "adding integers" },
@@ -157,8 +149,7 @@ describe("infix operators", () => {
 
   cases.forEach(({ input, description }) => {
     test(`${description}: ${input}`, () => {
-      const [program, parser] = parseProgram(input);
-      expectNoParseErrors(parser);
+      const [program] = parseProgram(input);
       expect(program).toEqual<Program>({
         type: "Program",
         statements: [
@@ -205,8 +196,7 @@ describe("operator precedence", () => {
 
   cases.forEach(([input, expected]) => {
     test(`${input}`, () => {
-      const [program, parser] = parseProgram(input);
-      expectNoParseErrors(parser);
+      const [program] = parseProgram(input);
       expect(print(program)).toBe(expected);
     });
   });
@@ -214,8 +204,7 @@ describe("operator precedence", () => {
 
 describe("boolean literals", () => {
   test("true", () => {
-    const [program, parser] = parseProgram("true;");
-    expectNoParseErrors(parser);
+    const [program] = parseProgram("true;");
     expect(program).toEqual<Program>({
       type: "Program",
       statements: [
@@ -228,8 +217,7 @@ describe("boolean literals", () => {
   });
 
   test("false", () => {
-    const [program, parser] = parseProgram("false;");
-    expectNoParseErrors(parser);
+    const [program] = parseProgram("false;");
     expect(program).toEqual<Program>({
       type: "Program",
       statements: [

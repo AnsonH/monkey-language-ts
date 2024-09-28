@@ -11,11 +11,7 @@ import {
   ReturnStatement,
   Statement,
 } from "./ast.js";
-import {
-  NoPrefixParseFunctionError,
-  ParseError,
-  UnexpectedTokenError,
-} from "./error.js";
+import { NoPrefixParseFunctionError, UnexpectedTokenError } from "./error.js";
 import Lexer from "./lexer.js";
 import { Token, TokenType } from "./token.js";
 
@@ -57,10 +53,13 @@ const precedences = new Map<TokenType, Precedence>([
  *
  * It's a top down parser that starts with constructing root node of the AST
  * and then descends.
+ *
+ * The parser does not store errors, so that it throws parse error directly.
+ * This is to keep the parser implementation simple, and there's no point of
+ * continuing constructing the AST if there are parse errors.
  */
 class Parser {
   lexer: Lexer;
-  private errors: ParseError[] = [];
 
   private currentToken: Token;
   private peekToken: Token;
@@ -95,6 +94,12 @@ class Parser {
     ]);
   }
 
+  /**
+   * Parses the program and returns an AST.
+   *
+   * @throws `ParseError` if any syntax error is encountered. There's no point of
+   * continuing building the AST so we throw error instead of storing it for later.
+   */
   parseProgram(): Program {
     const statements: Statement[] = [];
 
@@ -109,10 +114,6 @@ class Parser {
     return { type: "Program", statements };
   }
 
-  getErrors(): ParseError[] {
-    return this.errors;
-  }
-
   /**
    * Assert the next token (`peekToken`) is of the expected type, and consume it
    * if the type is correct.
@@ -122,7 +123,6 @@ class Parser {
       this.nextToken();
       return true;
     } else {
-      this.errors.push(new UnexpectedTokenError(type, this.peekToken.type));
       return false;
     }
   }
@@ -148,7 +148,7 @@ class Parser {
     return precedences.get(this.peekToken.type) ?? Precedence.Lowest;
   }
 
-  private parseStatement(): Statement | null {
+  private parseStatement(): Statement {
     switch (this.currentToken.type) {
       case TokenType.Let:
         return this.parseLetStatement();
@@ -177,10 +177,12 @@ class Parser {
   /**
    * Parses `let <identifier> = <expression>;`, with current token sitting on
    * `TokenType.Let`.
+   *
+   * @throws UnexpectedTokenError if the statement is syntactically incorrect.
    */
-  private parseLetStatement(): LetStatement | null {
+  private parseLetStatement(): LetStatement {
     if (!this.expectPeek(TokenType.Ident)) {
-      return null;
+      throw new UnexpectedTokenError(TokenType.Ident, this.peekToken.type);
     }
 
     const name: Identifier = {
@@ -189,14 +191,15 @@ class Parser {
     };
 
     if (!this.expectPeek(TokenType.Assign)) {
-      this.errors.push(
-        new UnexpectedTokenError(TokenType.Assign, this.peekToken.type),
-      );
-      return null;
+      throw new UnexpectedTokenError(TokenType.Assign, this.peekToken.type);
     }
 
     this.nextToken(); // Consume `=`, so currentToken sits on expression
     const value = this.parseExpression(Precedence.Lowest);
+
+    if (this.isPeekToken(TokenType.Semicolon)) {
+      this.nextToken();
+    }
 
     return { type: "LetStatement", name, value };
   }
@@ -218,13 +221,13 @@ class Parser {
 
   /**
    * Pratt parsing for expressions.
+   *
+   * @throws NoPrefixParseFunctionError
    */
   private parseExpression(precedence: Precedence): Expression {
     const prefixFn = this.prefixParseFns.get(this.currentToken.type);
     if (!prefixFn) {
-      this.errors.push(new NoPrefixParseFunctionError(this.currentToken.type));
-      // @ts-ignore
-      return null;
+      throw new NoPrefixParseFunctionError(this.currentToken.type);
     }
     let leftExp: Expression = prefixFn();
 
@@ -265,6 +268,11 @@ class Parser {
     };
   }
 
+  /**
+   * Parses an expression grouped with `( )`, for example `(1 + 2)`.
+   *
+   * @throws UnexpectedTokenError if the closing `)` is missing.
+   */
   private parseGroupedExpression(): Expression {
     this.nextToken(); // Consume `(`
 
@@ -273,11 +281,7 @@ class Parser {
     const expression = this.parseExpression(Precedence.Lowest);
 
     if (!this.expectPeek(TokenType.RParen)) {
-      this.errors.push(
-        new UnexpectedTokenError(TokenType.RBrace, this.peekToken.type),
-      );
-      // @ts-ignore
-      return null;
+      throw new UnexpectedTokenError(TokenType.RBrace, this.peekToken.type);
     }
 
     return expression;
