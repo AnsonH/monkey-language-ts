@@ -303,3 +303,92 @@ describe("if expressions", () => {
     });
   });
 });
+
+describe("function literals", () => {
+  test("with no parameter", () => {
+    const input = "fn() { 5 }";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "FunctionLiteral",
+            parameters: [],
+            body: {
+              type: "BlockStatement",
+              statements: [
+                {
+                  type: "ExpressionStatement",
+                  expression: { type: "IntegerLiteral", value: 5 },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  test("with one parameter", () => {
+    const input = "fn(x) { x }";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "FunctionLiteral",
+            parameters: [{ type: "Identifier", value: "x" }],
+            body: {
+              type: "BlockStatement",
+              statements: [
+                {
+                  type: "ExpressionStatement",
+                  expression: { type: "Identifier", value: "x" },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  test("with multiple parameters", () => {
+    const input = "fn(x, y, z) { return x + y; }";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "FunctionLiteral",
+            parameters: [
+              { type: "Identifier", value: "x" },
+              { type: "Identifier", value: "y" },
+              { type: "Identifier", value: "z" },
+            ],
+            body: {
+              type: "BlockStatement",
+              statements: [
+                {
+                  type: "ReturnStatement",
+                  returnValue: {
+                    type: "InfixExpression",
+                    left: { type: "Identifier", value: "x" },
+                    operator: "+",
+                    right: { type: "Identifier", value: "y" },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+});

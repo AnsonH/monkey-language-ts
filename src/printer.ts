@@ -16,6 +16,11 @@ function print(node: Node): string {
     // Expressions
     case "BooleanLiteral":
       return node.value.toString();
+    case "FunctionLiteral": {
+      const parameters = node.parameters.map((p) => p.value).join(", ");
+      const body = print(node.body);
+      return `fn (${parameters}) ${body}`;
+    }
     case "Identifier":
       return node.value;
     case "IfExpression": {

@@ -3,6 +3,7 @@ import {
   BooleanLiteral,
   Expression,
   ExpressionStatement,
+  FunctionLiteral,
   Identifier,
   IfExpression,
   InfixExpression,
@@ -83,6 +84,7 @@ class Parser {
       [TokenType.True, this.parseBoolean.bind(this)],
       [TokenType.False, this.parseBoolean.bind(this)],
       [TokenType.LParen, this.parseGroupedExpression.bind(this)],
+      [TokenType.Function, this.parseFunctionLiteral.bind(this)],
     ]);
 
     this.infixParseFns = new Map<TokenType, InfixParseFn>([
@@ -152,7 +154,7 @@ class Parser {
   }
 
   /**
-   * `currentToken` in different scenarios:
+   * `currentToken` value:
    * - Before parsing: First token of the statement (e.g. `let`, `return`, etc.)
    * - After parsing: Last token of the statement (e.g. semi-colon)
    */
@@ -167,6 +169,11 @@ class Parser {
     }
   }
 
+  /**
+   * `currentToken` value:
+   * - Before parsing: Opening `{`
+   * - After parsing: Closing `}`
+   */
   private parseBlockStatement(): BlockStatement {
     this.nextToken(); // Assumes currentToken is at `{`, so consume it
 
@@ -293,6 +300,55 @@ class Parser {
   }
 
   /**
+   * @throws UnexpectedTokenError if syntax is incorrect
+   */
+  private parseFunctionLiteral(): FunctionLiteral {
+    if (!this.expectPeek(TokenType.LParen)) {
+      throw new UnexpectedTokenError(TokenType.LParen, this.peekToken.type);
+    }
+
+    const parameters = this.parseFunctionParameters();
+
+    if (!this.expectPeek(TokenType.LBrace)) {
+      throw new UnexpectedTokenError(TokenType.LBrace, this.peekToken.type);
+    }
+
+    const body = this.parseBlockStatement();
+
+    return { type: "FunctionLiteral", parameters, body };
+  }
+
+  /**
+   * `currentToken` value:
+   * - Before parsing: Opening `(`
+   * - After parsing: Closing `)`
+   *
+   * @throws UnexpectedTokenError if syntax is incorrect
+   */
+  private parseFunctionParameters(): Identifier[] {
+    if (this.isPeekToken(TokenType.RParen)) {
+      this.nextToken();
+      return [];
+    }
+
+    this.nextToken();
+
+    const parameters: Identifier[] = [this.parseIdentifier()];
+
+    while (this.isPeekToken(TokenType.Comma)) {
+      this.nextToken(); // Move to `,`
+      this.nextToken(); // Move to next parameter
+      parameters.push(this.parseIdentifier());
+    }
+
+    if (!this.expectPeek(TokenType.RParen)) {
+      throw new UnexpectedTokenError(TokenType.RParen, this.peekToken.type);
+    }
+
+    return parameters;
+  }
+
+  /**
    * Parses an expression grouped with `( )`, for example `(1 + 2)`.
    *
    * @throws UnexpectedTokenError if the closing `)` is missing.
@@ -316,9 +372,7 @@ class Parser {
   }
 
   /**
-   * Parses `if (<condition>) <consequence> (else <alternative>)`.
-   *
-   * Example: `if ( x < y ) { x } else { y }`.
+   * @throws UnexpectedTokenError if syntax is incorrect
    */
   private parseIfExpression(): IfExpression {
     if (!this.expectPeek(TokenType.LParen)) {

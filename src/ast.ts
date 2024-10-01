@@ -13,6 +13,7 @@ export type Node = Program | Expression | Statement;
  */
 export type Expression =
   | BooleanLiteral
+  | FunctionLiteral
   | Identifier
   | IfExpression
   | InfixExpression
@@ -41,13 +42,24 @@ export interface BooleanLiteral extends BaseNode {
   value: boolean;
 }
 
+/**
+ * Syntax: `fn(<parameter1>, <parameter2>, ...) { <statements> }`
+ */
+export interface FunctionLiteral extends BaseNode {
+  type: "FunctionLiteral";
+  parameters: Identifier[];
+  body: BlockStatement;
+}
+
 export interface Identifier extends BaseNode {
   type: "Identifier";
   value: string;
 }
 
 /**
- * `if <condition> <consequence> (else <alternative>)`
+ * Syntax:
+ * - `if ( <condition> ) { <statements> }`
+ * - `if ( <condition> ) { <statements> } else { <statements> }`
  */
 export interface IfExpression extends BaseNode {
   type: "IfExpression";
@@ -74,6 +86,9 @@ export interface InfixExpression extends BaseNode {
   right: Expression;
 }
 
+/**
+ * Syntax: `{ <statements> }`
+ */
 export interface BlockStatement extends BaseNode {
   type: "BlockStatement";
   statements: Statement[];
@@ -87,6 +102,9 @@ export interface ExpressionStatement extends BaseNode {
   expression: Expression;
 }
 
+/**
+ * Syntax: `let <identifier> = <expression>`
+ */
 export interface LetStatement extends BaseNode {
   type: "LetStatement";
   name: Identifier;
