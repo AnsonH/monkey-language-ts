@@ -229,3 +229,77 @@ describe("boolean literals", () => {
     });
   });
 });
+
+describe("if expressions", () => {
+  test("if expression without else", () => {
+    const input = "if (x < y) { x }";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "IfExpression",
+            condition: {
+              type: "InfixExpression",
+              left: { type: "Identifier", value: "x" },
+              operator: "<",
+              right: { type: "Identifier", value: "y" },
+            },
+            consequence: {
+              type: "BlockStatement",
+              statements: [
+                {
+                  type: "ExpressionStatement",
+                  expression: { type: "Identifier", value: "x" },
+                },
+              ],
+            },
+            alternative: null,
+          },
+        },
+      ],
+    });
+  });
+
+  test("if expression with else", () => {
+    const input = "if (x < y) { x } else { y }";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "IfExpression",
+            condition: {
+              type: "InfixExpression",
+              left: { type: "Identifier", value: "x" },
+              operator: "<",
+              right: { type: "Identifier", value: "y" },
+            },
+            consequence: {
+              type: "BlockStatement",
+              statements: [
+                {
+                  type: "ExpressionStatement",
+                  expression: { type: "Identifier", value: "x" },
+                },
+              ],
+            },
+            alternative: {
+              type: "BlockStatement",
+              statements: [
+                {
+                  type: "ExpressionStatement",
+                  expression: { type: "Identifier", value: "y" },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+});

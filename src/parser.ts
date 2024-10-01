@@ -1,8 +1,10 @@
 import {
+  BlockStatement,
   BooleanLiteral,
   Expression,
   ExpressionStatement,
   Identifier,
+  IfExpression,
   InfixExpression,
   IntegerLiteral,
   LetStatement,
@@ -74,6 +76,7 @@ class Parser {
 
     this.prefixParseFns = new Map<TokenType, PrefixParseFn>([
       [TokenType.Ident, this.parseIdentifier.bind(this)],
+      [TokenType.If, this.parseIfExpression.bind(this)],
       [TokenType.Int, this.parseIntegerLiteral.bind(this)],
       [TokenType.Bang, this.parsePrefixExpression.bind(this)],
       [TokenType.Minus, this.parsePrefixExpression.bind(this)],
@@ -148,6 +151,11 @@ class Parser {
     return precedences.get(this.peekToken.type) ?? Precedence.Lowest;
   }
 
+  /**
+   * `currentToken` in different scenarios:
+   * - Before parsing: First token of the statement (e.g. `let`, `return`, etc.)
+   * - After parsing: Last token of the statement (e.g. semi-colon)
+   */
   private parseStatement(): Statement {
     switch (this.currentToken.type) {
       case TokenType.Let:
@@ -157,6 +165,22 @@ class Parser {
       default:
         return this.parseExpressionStatement();
     }
+  }
+
+  private parseBlockStatement(): BlockStatement {
+    this.nextToken(); // Assumes currentToken is at `{`, so consume it
+
+    const statements: Statement[] = [];
+
+    while (
+      !this.isCurrentToken(TokenType.RBrace) &&
+      !this.isCurrentToken(TokenType.Eof)
+    ) {
+      statements.push(this.parseStatement());
+      this.nextToken(); // Move to first token of the next statement, or closing `}`
+    }
+
+    return { type: "BlockStatement", statements };
   }
 
   /**
@@ -289,6 +313,44 @@ class Parser {
 
   private parseIdentifier(): Identifier {
     return { type: "Identifier", value: this.currentToken.literal };
+  }
+
+  /**
+   * Parses `if (<condition>) <consequence> (else <alternative>)`.
+   *
+   * Example: `if ( x < y ) { x } else { y }`.
+   */
+  private parseIfExpression(): IfExpression {
+    if (!this.expectPeek(TokenType.LParen)) {
+      throw new UnexpectedTokenError(TokenType.LParen, this.peekToken.type);
+    }
+
+    this.nextToken(); // Consume `(`
+    const condition = this.parseExpression(Precedence.Lowest);
+
+    // Expects and consumes closing `)`
+    if (!this.expectPeek(TokenType.RParen)) {
+      throw new UnexpectedTokenError(TokenType.RParen, this.peekToken.type);
+    }
+    if (!this.expectPeek(TokenType.LBrace)) {
+      throw new UnexpectedTokenError(TokenType.LBrace, this.peekToken.type);
+    }
+
+    const consequence = this.parseBlockStatement();
+    let alternative: BlockStatement | null = null;
+
+    // After parsing `consequence`, `currentToken` is `}`
+    if (this.isPeekToken(TokenType.Else)) {
+      this.nextToken(); // Consume `else`
+
+      if (!this.expectPeek(TokenType.LBrace)) {
+        throw new UnexpectedTokenError(TokenType.LBrace, this.peekToken.type);
+      }
+
+      alternative = this.parseBlockStatement();
+    }
+
+    return { type: "IfExpression", condition, consequence, alternative };
   }
 
   private parseInfixExpression(left: Expression): InfixExpression {

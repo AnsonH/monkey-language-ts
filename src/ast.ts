@@ -14,6 +14,7 @@ export type Node = Program | Expression | Statement;
 export type Expression =
   | BooleanLiteral
   | Identifier
+  | IfExpression
   | InfixExpression
   | IntegerLiteral
   | PrefixExpression;
@@ -21,7 +22,11 @@ export type Expression =
 /**
  * Statement does not produce a value.
  */
-export type Statement = ExpressionStatement | LetStatement | ReturnStatement;
+export type Statement =
+  | BlockStatement
+  | ExpressionStatement
+  | LetStatement
+  | ReturnStatement;
 
 /**
  * Root node of the AST that represents the entire program.
@@ -41,6 +46,16 @@ export interface Identifier extends BaseNode {
   value: string;
 }
 
+/**
+ * `if <condition> <consequence> (else <alternative>)`
+ */
+export interface IfExpression extends BaseNode {
+  type: "IfExpression";
+  condition: Expression;
+  consequence: BlockStatement;
+  alternative: BlockStatement | null;
+}
+
 export interface IntegerLiteral extends BaseNode {
   type: "IntegerLiteral";
   value: number;
@@ -57,6 +72,11 @@ export interface InfixExpression extends BaseNode {
   left: Expression;
   operator: string;
   right: Expression;
+}
+
+export interface BlockStatement extends BaseNode {
+  type: "BlockStatement";
+  statements: Statement[];
 }
 
 /**

@@ -2,10 +2,10 @@ import { Node } from "./ast.js";
 
 function print(node: Node): string {
   switch (node.type) {
-    case "Program":
-      return node.statements.map(print).join("\n");
-
     // Statements
+    case "Program":
+    case "BlockStatement":
+      return node.statements.map(print).join("\n");
     case "ExpressionStatement":
       return `${print(node.expression)};`;
     case "LetStatement":
@@ -18,6 +18,12 @@ function print(node: Node): string {
       return node.value.toString();
     case "Identifier":
       return node.value;
+    case "IfExpression": {
+      const { condition, consequence, alternative } = node;
+      const ifBranch = `if ${print(condition)} ${print(consequence)}`;
+      const elseBranch = alternative ? `else ${print(alternative)}` : "";
+      return ifBranch + elseBranch;
+    }
     case "IntegerLiteral":
       return node.value.toString();
     case "PrefixExpression":
