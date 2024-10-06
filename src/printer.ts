@@ -16,6 +16,10 @@ function print(node: Node): string {
     // Expressions
     case "BooleanLiteral":
       return node.value.toString();
+    case "CallExpression": {
+      const args = node.arguments.map(print).join(", ");
+      return `${print(node.function)}(${args})`;
+    }
     case "FunctionLiteral": {
       const parameters = node.parameters.map((p) => p.value).join(", ");
       const body = print(node.body);

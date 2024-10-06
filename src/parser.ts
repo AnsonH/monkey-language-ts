@@ -1,6 +1,7 @@
 import {
   BlockStatement,
   BooleanLiteral,
+  CallExpression,
   Expression,
   ExpressionStatement,
   FunctionLiteral,
@@ -49,6 +50,7 @@ const precedences = new Map<TokenType, Precedence>([
   [TokenType.Minus, Precedence.Sum],
   [TokenType.Slash, Precedence.Product],
   [TokenType.Asterisk, Precedence.Product],
+  [TokenType.LParen, Precedence.Call],
 ]);
 
 /**
@@ -96,6 +98,7 @@ class Parser {
       [TokenType.NotEqual, this.parseInfixExpression.bind(this)],
       [TokenType.LessThan, this.parseInfixExpression.bind(this)],
       [TokenType.GreaterThan, this.parseInfixExpression.bind(this)],
+      [TokenType.LParen, this.parseCallExpression.bind(this)],
     ]);
   }
 
@@ -248,6 +251,52 @@ class Parser {
     }
 
     return { type: "ReturnStatement", returnValue };
+  }
+
+  /**
+   * `currentToken` value:
+   * - Before parsing: Opening `(`
+   * - After parsing: Closing `)`
+   *
+   * @throws UnexpectedTokenError if syntax is incorrect
+   */
+  // TODO: It's very similar to `parseFunctionParameters`, consider refactoring
+  private parseCallArguments(): Expression[] {
+    if (this.isPeekToken(TokenType.RParen)) {
+      this.nextToken();
+      return [];
+    }
+
+    this.nextToken();
+
+    const args: Expression[] = [this.parseExpression(Precedence.Lowest)];
+
+    while (this.isPeekToken(TokenType.Comma)) {
+      this.nextToken(); // Move to `,`
+      this.nextToken(); // Move to next argument
+      args.push(this.parseExpression(Precedence.Lowest));
+    }
+
+    if (!this.expectPeek(TokenType.RParen)) {
+      throw new UnexpectedTokenError(TokenType.RParen, this.peekToken.type);
+    }
+
+    return args;
+  }
+
+  /**
+   * Parses `<identifier | function literal>(<parameter1>, <parameter2>, ...)`.
+   *
+   * It's a type of {@link InfixParseFn}, where the "operator" is `(`.
+   *
+   * Example: `add(1, 2)`
+   * - `add` is an identifier parsed by a prefix parse function
+   * - After that, `(` sits between the identifier and the arguments, in an
+   *  infix position
+   */
+  private parseCallExpression(fn: Expression): CallExpression {
+    const args = this.parseCallArguments();
+    return { type: "CallExpression", function: fn, arguments: args };
   }
 
   /**

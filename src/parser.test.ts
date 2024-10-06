@@ -192,6 +192,14 @@ describe("operator precedence", () => {
     ["2 / (5 + 5)", "(2 / (5 + 5));"],
     ["-(5 + 5)", "(-(5 + 5));"],
     ["!(true == true)", "(!(true == true));"],
+
+    // Call expressions have highest precedence
+    ["a + add(b * c) + d", "((a + add((b * c))) + d);"],
+    [
+      "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+      "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)));",
+    ],
+    ["add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g));"],
   ];
 
   cases.forEach(([input, expected]) => {
@@ -386,6 +394,108 @@ describe("function literals", () => {
                 },
               ],
             },
+          },
+        },
+      ],
+    });
+  });
+});
+
+describe("call expressions", () => {
+  test("function identifier call with no args", () => {
+    const input = "f()";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "CallExpression",
+            function: { type: "Identifier", value: "f" },
+            arguments: [],
+          },
+        },
+      ],
+    });
+  });
+
+  test("function identifier call with one arg", () => {
+    const input = "f(1 + 2)";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "CallExpression",
+            function: { type: "Identifier", value: "f" },
+            arguments: [
+              {
+                type: "InfixExpression",
+                left: { type: "IntegerLiteral", value: 1 },
+                operator: "+",
+                right: { type: "IntegerLiteral", value: 2 },
+              },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
+  test("function identifier call with multiple args", () => {
+    const input = "f(a, b + c, d)";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "CallExpression",
+            function: { type: "Identifier", value: "f" },
+            arguments: [
+              { type: "Identifier", value: "a" },
+              {
+                type: "InfixExpression",
+                left: { type: "Identifier", value: "b" },
+                operator: "+",
+                right: { type: "Identifier", value: "c" },
+              },
+              { type: "Identifier", value: "d" },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
+  test("function literal call", () => {
+    const input = "fn(x){ x }(1)";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "CallExpression",
+            function: {
+              type: "FunctionLiteral",
+              parameters: [{ type: "Identifier", value: "x" }],
+              body: {
+                type: "BlockStatement",
+                statements: [
+                  {
+                    type: "ExpressionStatement",
+                    expression: { type: "Identifier", value: "x" },
+                  },
+                ],
+              },
+            },
+            arguments: [{ type: "IntegerLiteral", value: 1 }],
           },
         },
       ],

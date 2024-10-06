@@ -13,6 +13,7 @@ export type Node = Program | Expression | Statement;
  */
 export type Expression =
   | BooleanLiteral
+  | CallExpression
   | FunctionLiteral
   | Identifier
   | IfExpression
@@ -40,6 +41,27 @@ export interface Program extends BaseNode {
 export interface BooleanLiteral extends BaseNode {
   type: "BooleanLiteral";
   value: boolean;
+}
+
+/**
+ * Syntax: `<identifier | function literal>(<parameter1>, <parameter2>, ...)`
+ *
+ * Examples:
+ * - `add(x, y + z)`
+ * - `foo(2, 3, fn(x, y) { x + y; })`
+ * - `fn(x) { x * x }(5)`
+ */
+export interface CallExpression extends BaseNode {
+  type: "CallExpression";
+  /**
+   * Although only `Identifier | FunctionLiteral` expressions are valid, we don't
+   * enforce this constraint in the type definition.
+   *
+   * This means "checking if an expression is callable" is not done by the parser,
+   * but a downstream consumer of the AST (i.e. evaluator).
+   */
+  function: Expression;
+  arguments: Expression[];
 }
 
 /**
@@ -73,12 +95,22 @@ export interface IntegerLiteral extends BaseNode {
   value: number;
 }
 
+/**
+ * Syntax: `<operator><right>`
+ *
+ * Examples: `!true`, `-(5 + 10)`
+ */
 export interface PrefixExpression extends BaseNode {
   type: "PrefixExpression";
   operator: string;
   right: Expression;
 }
 
+/**
+ * Syntax: `<left> <operator> <right>`
+ *
+ * Example: `2 + 3`
+ */
 export interface InfixExpression extends BaseNode {
   type: "InfixExpression";
   left: Expression;
