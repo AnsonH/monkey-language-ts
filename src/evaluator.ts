@@ -20,11 +20,100 @@ export function evaluate(node: Node): MObject {
     // Expressions
     case "BooleanLiteral":
       return nativeBoolToBooleanObject(node.value);
+    case "InfixExpression": {
+      return evalInfixExpression(
+        node.operator,
+        evaluate(node.left),
+        evaluate(node.right),
+      );
+    }
     case "IntegerLiteral":
       return new Integer(node.value);
+    case "PrefixExpression": {
+      const right = evaluate(node.right);
+      return evalPrefixExpression(node.operator, right);
+    }
   }
 
   return NULL;
+}
+
+function evalBangOperatorExpression(right: MObject): MObject {
+  // NOTE: JS switch statement uses strict comparison (===), so:
+  // - Works: `TRUE === TRUE`
+  // - Not works: `TRUE === new MBoolean(true)`
+  // It works for our case since we always use those constants
+  switch (right) {
+    case TRUE:
+      return FALSE;
+    case FALSE:
+      return TRUE;
+    case NULL:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+function evalInfixExpression(
+  operator: string,
+  left: MObject,
+  right: MObject,
+): MObject {
+  if (left instanceof Integer && right instanceof Integer) {
+    return evalIntegerInfixExpression(operator, left, right);
+  } else if (operator === "==") {
+    return nativeBoolToBooleanObject(left === right);
+  } else if (operator === "!=") {
+    return nativeBoolToBooleanObject(left !== right);
+  }
+
+  return NULL;
+}
+
+function evalIntegerInfixExpression(
+  operator: string,
+  left: Integer,
+  right: Integer,
+): MObject {
+  switch (operator) {
+    case "+":
+      return new Integer(left.value + right.value);
+    case "-":
+      return new Integer(left.value - right.value);
+    case "*":
+      return new Integer(left.value * right.value);
+    case "/":
+      return new Integer(left.value / right.value);
+    case "<":
+      return nativeBoolToBooleanObject(left.value < right.value);
+    case ">":
+      return nativeBoolToBooleanObject(left.value > right.value);
+    case "==":
+      return nativeBoolToBooleanObject(left.value === right.value);
+    case "!=":
+      return nativeBoolToBooleanObject(left.value !== right.value);
+    default:
+      return NULL;
+  }
+}
+
+function evalMinusPrefixOperatorExpression(right: MObject): MObject {
+  if (right instanceof Integer) {
+    return new Integer(-right.value);
+  }
+  return NULL;
+}
+
+function evalPrefixExpression(operator: string, right: MObject): MObject {
+  switch (operator) {
+    case "!":
+      return evalBangOperatorExpression(right);
+    case "-":
+      return evalMinusPrefixOperatorExpression(right);
+    default:
+      return NULL;
+  }
 }
 
 function evalStatements(statements: Statement[]): MObject {
