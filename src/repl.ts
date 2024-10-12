@@ -1,7 +1,7 @@
 import readline from "readline";
+import { evaluate } from "./evaluator.js";
 import Lexer from "./lexer.js";
 import Parser from "./parser.js";
-import print from "./printer.js";
 
 const PROMPT = ">> ";
 
@@ -22,7 +22,8 @@ export function startRepl() {
 
     try {
       const program = parser.parseProgram();
-      console.log(print(program));
+      const evaluated = evaluate(program);
+      console.log(evaluated.inspect());
     } catch (e) {
       console.error((e as Error).message);
     }
