@@ -28,3 +28,11 @@ export class Null implements MObject {
     return "null";
   }
 }
+
+export class ReturnValue implements MObject {
+  constructor(public value: MObject) {}
+
+  inspect(): string {
+    return this.value.inspect();
+  }
+}

@@ -1,5 +1,5 @@
-import { Node, Statement } from "./ast.js";
-import { MBoolean, Integer, MObject, Null } from "./object.js";
+import { BlockStatement, IfExpression, Node, Statement } from "./ast.js";
+import { MBoolean, Integer, MObject, Null, ReturnValue } from "./object.js";
 
 // NOTE: Creating constants can avoid creating new instances for the same values
 export const TRUE = new MBoolean(true);
@@ -11,28 +11,32 @@ export const NULL = new Null();
  */
 export function evaluate(node: Node): MObject {
   switch (node.type) {
-    // Statements
     case "Program":
-      return evalStatements(node.statements);
+      return evalProgram(node.statements);
+
+    // Statements
+    case "BlockStatement":
+      return evalBlockStatement(node);
     case "ExpressionStatement":
       return evaluate(node.expression);
+    case "ReturnStatement":
+      return new ReturnValue(evaluate(node.returnValue));
 
     // Expressions
     case "BooleanLiteral":
       return nativeBoolToBooleanObject(node.value);
-    case "InfixExpression": {
+    case "IfExpression":
+      return evalIfExpression(node);
+    case "InfixExpression":
       return evalInfixExpression(
         node.operator,
         evaluate(node.left),
         evaluate(node.right),
       );
-    }
     case "IntegerLiteral":
       return new Integer(node.value);
-    case "PrefixExpression": {
-      const right = evaluate(node.right);
-      return evalPrefixExpression(node.operator, right);
-    }
+    case "PrefixExpression":
+      return evalPrefixExpression(node.operator, evaluate(node.right));
   }
 
   return NULL;
@@ -53,6 +57,28 @@ function evalBangOperatorExpression(right: MObject): MObject {
     default:
       return FALSE;
   }
+}
+
+function evalBlockStatement(block: BlockStatement): MObject {
+  let result: MObject = NULL;
+
+  for (const statement of block.statements) {
+    result = evaluate(statement);
+
+    if (result instanceof ReturnValue) {
+      return result; // Return whole ReturnValue object instead of `result.value`
+    }
+  }
+
+  return result;
+}
+
+function evalIfExpression(node: IfExpression): MObject {
+  const condition = evaluate(node.condition);
+  if (isTruthy(condition)) {
+    return evaluate(node.consequence);
+  }
+  return node.alternative ? evaluate(node.alternative) : NULL;
 }
 
 function evalInfixExpression(
@@ -116,14 +142,28 @@ function evalPrefixExpression(operator: string, right: MObject): MObject {
   }
 }
 
-function evalStatements(statements: Statement[]): MObject {
+function evalProgram(statements: Statement[]): MObject {
   let result: MObject = NULL;
 
   for (const statement of statements) {
     result = evaluate(statement);
+
+    if (result instanceof ReturnValue) {
+      // Stop the program and return the value
+      return result.value;
+    }
   }
 
   return result;
+}
+
+/**
+ * A value is "truthy" if it is not null and not false.
+ *
+ * NOTE: Original specs of Monkey considers `0` is truthy.
+ */
+function isTruthy(obj: MObject): boolean {
+  return obj !== NULL && obj !== FALSE;
 }
 
 function nativeBoolToBooleanObject(input: boolean): MBoolean {

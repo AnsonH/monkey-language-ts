@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { evaluate } from "./evaluator.js";
 import Lexer from "./lexer.js";
-import { MBoolean, Integer, MObject } from "./object.js";
+import { MBoolean, Integer, MObject, Null } from "./object.js";
 import Parser from "./parser.js";
 
 function evaluateProgram(input: string): MObject {
@@ -76,7 +76,7 @@ describe("boolean expressions", () => {
   });
 });
 
-test("bang infix operator", () => {
+describe("bang infix operator", () => {
   const testCases: [input: string, expected: boolean][] = [
     ["!true", false],
     ["!false", true],
@@ -87,8 +87,105 @@ test("bang infix operator", () => {
   ];
 
   testCases.forEach(([input, expected]) => {
-    const output = evaluateProgram(input);
-    expect(output).toBeInstanceOf(MBoolean);
-    expect((output as MBoolean).value).toBe(expected);
+    test(`${input} should evaluate to ${expected}`, () => {
+      const output = evaluateProgram(input);
+      expect(output).toBeInstanceOf(MBoolean);
+      expect((output as MBoolean).value).toBe(expected);
+    });
+  });
+});
+
+describe("if else expressions", () => {
+  const cases = [
+    {
+      input: "if (true) { 10 }",
+      expected: 10,
+      description: "literal true condition",
+    },
+    {
+      input: "if (false) { 10 }",
+      description: "literal false condition",
+    },
+    {
+      input: "if (1) { 10 }",
+      expected: 10,
+      description: "truthy condition",
+    },
+    {
+      input: "if (1 < 2) { 10 }",
+      expected: 10,
+      description: "condition expression that evaluates to true",
+    },
+    {
+      input: "if (1 > 2) { 10 }",
+      description: "condition expression that evaluates to false",
+    },
+    {
+      input: "if (1 < 2) { 10 } else { 20 }",
+      expected: 10,
+      description: "true condition with alternative",
+    },
+    {
+      input: "if (1 > 2) { 10 } else { 20 }",
+      expected: 20,
+      description: "false condition with alternative",
+    },
+  ];
+
+  cases.forEach(({ input, expected, description }) => {
+    test(`${description}: ${input}`, () => {
+      const result = evaluateProgram(input);
+
+      if (expected) {
+        expect(result).toEqual(new Integer(expected));
+      } else {
+        expect(result).toBeInstanceOf(Null);
+      }
+    });
+  });
+});
+
+describe("return statements", () => {
+  const cases = [
+    {
+      input: "return 10;",
+      expected: 10,
+      description: "return a literal",
+    },
+    {
+      input: "return 10; 9;",
+      expected: 10,
+      description: "return before another statement",
+    },
+    {
+      input: "return 2 * 5; 9;",
+      expected: 10,
+      description: "return an expression",
+    },
+    {
+      input: "9; return 2 * 5; 9;",
+      expected: 10,
+      description: "return between two other statements",
+    },
+    {
+      input: `
+        if (10 > 1) {
+          if (8 > 1) {
+            return 10;
+          }
+          return 1;
+        }
+      `,
+      expected: 10,
+      description: "returning in a nested block statement",
+    },
+  ];
+
+  cases.forEach(({ input, expected, description }) => {
+    test(`${description}`, () => {
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(Integer);
+      expect((result as Integer).value).toBe(expected);
+    });
   });
 });
