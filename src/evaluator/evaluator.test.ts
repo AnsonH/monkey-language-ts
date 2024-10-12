@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
+import Lexer from "../lexer/lexer.js";
+import Parser from "../parser/parser.js";
 import { evaluate } from "./evaluator.js";
-import Lexer from "./lexer.js";
-import { MBoolean, Integer, MObject, Null } from "./object.js";
-import Parser from "./parser.js";
+import { Integer, MBoolean, MObject, Null } from "./object.js";
 
 function evaluateProgram(input: string): MObject {
   const lexer = new Lexer(input);

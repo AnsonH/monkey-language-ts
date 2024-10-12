@@ -1,5 +1,10 @@
-import { BlockStatement, IfExpression, Node, Statement } from "./ast.js";
-import { MBoolean, Integer, MObject, Null, ReturnValue } from "./object.js";
+import {
+  BlockStatement,
+  IfExpression,
+  Node,
+  Statement,
+} from "../parser/ast.js";
+import { Integer, MBoolean, MObject, Null, ReturnValue } from "./object.js";
 
 // NOTE: Creating constants can avoid creating new instances for the same values
 export const TRUE = new MBoolean(true);

@@ -1,4 +1,4 @@
-import { Node } from "./ast.js";
+import { Node } from "./parser/ast.js";
 
 function print(node: Node): string {
   switch (node.type) {

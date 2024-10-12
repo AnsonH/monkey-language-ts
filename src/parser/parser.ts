@@ -1,3 +1,5 @@
+import Lexer from "../lexer/lexer.js";
+import { Token, TokenType } from "../lexer/token.js";
 import {
   BlockStatement,
   BooleanLiteral,
@@ -16,8 +18,6 @@ import {
   Statement,
 } from "./ast.js";
 import { NoPrefixParseFunctionError, UnexpectedTokenError } from "./error.js";
-import Lexer from "./lexer.js";
-import { Token, TokenType } from "./token.js";
 
 /**
  * Parses a prefix operator of `<prefix operator><expression>` (e.g. `-5`).

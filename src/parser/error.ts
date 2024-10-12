@@ -1,4 +1,4 @@
-import { TokenType } from "./token.js";
+import { TokenType } from "../lexer/token.js";
 
 export class ParseError extends Error {}
 

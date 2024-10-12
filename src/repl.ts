@@ -1,7 +1,7 @@
 import readline from "readline";
-import { evaluate } from "./evaluator.js";
-import Lexer from "./lexer.js";
-import Parser from "./parser.js";
+import { evaluate } from "./evaluator/evaluator.js";
+import Lexer from "./lexer/lexer.js";
+import Parser from "./parser/parser.js";
 
 const PROMPT = ">> ";
 
