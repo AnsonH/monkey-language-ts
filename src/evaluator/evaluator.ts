@@ -1,5 +1,6 @@
 import {
   BlockStatement,
+  Expression,
   Identifier,
   IfExpression,
   Node,
@@ -9,10 +10,18 @@ import Environment from "./environment.js";
 import {
   EvaluationError,
   IdentifierNotFoundError,
+  NotAFunctionError,
   TypeMismatchError,
   UnknownOperatorError,
 } from "./error.js";
-import { Integer, MBoolean, MObject, Null, ReturnValue } from "./object.js";
+import {
+  Integer,
+  MBoolean,
+  MFunction,
+  MObject,
+  Null,
+  ReturnValue,
+} from "./object.js";
 
 // Creating constants for these values can:
 // 1. Avoid creating new instances for the same values
@@ -53,6 +62,28 @@ export function evaluate(node: Node, env: Environment): MObject {
     // Expressions
     case "BooleanLiteral":
       return nativeBoolToBooleanObject(node.value);
+    case "CallExpression": {
+      /**
+       * Two cases under valid syntax:
+       * 1. With identifier (e.g. `foo(5)`) -> Calls {@link evalIdentifier} to
+       *   search the {@link MFunction} definition in the environment.
+       * 2. Immediately invoked (e.g. `fn(x){ x }(5)`) -> Evaluates the function
+       *   literal to get {@link MFunction}.
+       */
+      const fn = evaluate(node.function, env);
+      if (fn instanceof EvaluationError) {
+        return fn;
+      }
+
+      const args = evalExpressions(node.arguments, env);
+      if (args.length === 1 && args[0] instanceof EvaluationError) {
+        return args[0];
+      }
+
+      return applyFunction(fn, args);
+    }
+    case "FunctionLiteral":
+      return new MFunction(node.parameters, node.body, env);
     case "Identifier":
       return evalIdentifier(node, env);
     case "IfExpression":
@@ -80,6 +111,20 @@ export function evaluate(node: Node, env: Environment): MObject {
   }
 
   return NULL;
+}
+
+/**
+ * Invokes the function with the arguments.
+ * @param fn Only object of type {@link MFunction} is considered valid
+ */
+function applyFunction(fn: MObject, args: MObject[]): MObject {
+  if (!(fn instanceof MFunction)) {
+    return new NotAFunctionError(fn.inspect());
+  }
+
+  const extendedEnv = extendFunctionEnv(fn, args);
+  const evaluated = evaluate(fn.body, extendedEnv);
+  return unwrapReturnValue(evaluated);
 }
 
 function evalBangOperatorExpression(right: MObject): MObject {
@@ -126,6 +171,20 @@ function evalBlockStatement(block: BlockStatement, env: Environment): MObject {
       // If it's ReturnValue, we return whole object instead of `result.value`
       return result;
     }
+  }
+
+  return result;
+}
+
+function evalExpressions(exps: Expression[], env: Environment): MObject[] {
+  const result: MObject[] = [];
+
+  for (const exp of exps) {
+    const evaluated = evaluate(exp, env);
+    if (evaluated instanceof EvaluationError) {
+      return [evaluated];
+    }
+    result.push(evaluated);
   }
 
   return result;
@@ -237,6 +296,14 @@ function evalProgram(statements: Statement[], env: Environment): MObject {
   return result;
 }
 
+function extendFunctionEnv(fn: MFunction, args: MObject[]): Environment {
+  const env = new Environment(fn.env);
+  fn.parameters.forEach((param, idx) => {
+    env.set(param.value, args[idx]);
+  });
+  return env;
+}
+
 /**
  * A value is "truthy" if it is not null and not false.
  *
@@ -248,4 +315,8 @@ function isTruthy(obj: MObject): boolean {
 
 function nativeBoolToBooleanObject(input: boolean): MBoolean {
   return input ? TRUE : FALSE;
+}
+
+function unwrapReturnValue(obj: MObject): MObject {
+  return obj instanceof ReturnValue ? obj.value : obj;
 }

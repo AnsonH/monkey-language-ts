@@ -143,6 +143,9 @@ export interface LetStatement extends BaseNode {
   value: Expression;
 }
 
+/**
+ * Syntax: `return <expression>`
+ */
 export interface ReturnStatement extends BaseNode {
   type: "ReturnStatement";
   returnValue: Expression;

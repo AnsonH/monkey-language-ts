@@ -1,14 +1,15 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import Lexer from "../lexer/lexer.js";
+import { BlockStatement, Identifier } from "../parser/ast.js";
 import Parser from "../parser/parser.js";
-import { evaluate } from "./evaluator.js";
-import { Integer, MBoolean, MObject, Null } from "./object.js";
+import Environment from "./environment.js";
 import {
   IdentifierNotFoundError,
   TypeMismatchError,
   UnknownOperatorError,
 } from "./error.js";
-import Environment from "./environment.js";
+import { evaluate } from "./evaluator.js";
+import { Integer, MBoolean, MFunction, MObject, Null } from "./object.js";
 
 function evaluateProgram(input: string): MObject {
   const env = new Environment();
@@ -300,6 +301,131 @@ describe("let statements", () => {
       input: "let a = 5; let b = a; let c = a + b + 5; c;",
       expected: 15,
       description: "assigning an expression using multiple identifiers",
+    },
+  ];
+
+  cases.forEach(({ input, expected, description }) => {
+    test(`${description}`, () => {
+      const result = evaluateProgram(input);
+      expect((result as Integer).value).toBe(expected);
+    });
+  });
+});
+
+describe("function literals", () => {
+  const input = "fn(x) { x + 2; };";
+  const result = evaluateProgram(input);
+
+  it("is an instance of MFunction", () => {
+    expect(result).toBeInstanceOf(MFunction);
+  });
+
+  it("has correct parameters", () => {
+    expect((result as MFunction).parameters).toEqual<Identifier[]>([
+      { type: "Identifier", value: "x" },
+    ]);
+  });
+
+  it("has correct body", () => {
+    expect((result as MFunction).body).toEqual<BlockStatement>({
+      type: "BlockStatement",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "InfixExpression",
+            left: { type: "Identifier", value: "x" },
+            operator: "+",
+            right: { type: "IntegerLiteral", value: 2 },
+          },
+        },
+      ],
+    });
+  });
+});
+
+describe("function calls", () => {
+  const cases = [
+    {
+      input: "let identity = fn(x) { x; }; identity(5);",
+      expected: 5,
+      description: "implicit return value",
+    },
+    {
+      input: "let identity = fn(x) { return x; }; identity(5);",
+      expected: 5,
+      description: "explicit return value",
+    },
+    {
+      input: "let double = fn(x) { x * 2; }; double(5);",
+      expected: 10,
+      description: "using parameters in expressions",
+    },
+    {
+      input: "let add = fn(x, y) { x + y; }; add(5, 5);",
+      expected: 10,
+      description: "multiple parameters",
+    },
+    {
+      input: "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+      expected: 20,
+      description: "evaluating arguments before calling",
+    },
+    {
+      input: "fn(x) { x; }(5)",
+      expected: 5,
+      description: "immediately invoked function literal",
+    },
+
+    // Closures
+    {
+      input: `
+        let x = 5;
+        let addOne = fn(x) { x + 1 };
+        addOne(10);
+      `,
+      expected: 11,
+      description: 'function parameter shadows outer "x"',
+    },
+    {
+      input: `
+        let newAdder = fn(x) {
+          fn(y) { x + y };
+        };
+        let addTwo = newAdder(2);
+        addTwo(3);
+      `,
+      expected: 5,
+      description: "higher order function",
+    },
+    {
+      input: `
+        let x = 10; 
+        let nestedFunc = fn() {
+          fn() {
+            fn() {
+              x;
+            }
+          }
+        }
+        nestedFunc()()();
+      `,
+      expected: 10,
+      description: "access deeply nested identifier in outermost environment",
+    },
+    {
+      input: `
+        let factorial = fn(n) {
+          if (n == 0) {
+            return 1;
+          } else {
+            return n * factorial(n - 1);
+          }
+        };
+        factorial(5);
+      `,
+      expected: 120,
+      description: "recursion",
     },
   ];
 

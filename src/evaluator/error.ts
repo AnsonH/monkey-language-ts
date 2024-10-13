@@ -19,6 +19,14 @@ export class IdentifierNotFoundError extends EvaluationError {
   }
 }
 
+export class NotAFunctionError extends EvaluationError {
+  name = "NotAFunctionError";
+
+  constructor(public identifier: string) {
+    super(`Not a function: ${identifier}`);
+  }
+}
+
 export class TypeMismatchError extends EvaluationError {
   name = "TypeMismatchError";
 

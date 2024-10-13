@@ -1,3 +1,7 @@
+import { BlockStatement, Identifier } from "../parser/ast.js";
+import print from "../parser/printer.js";
+import Environment from "./environment.js";
+
 /**
  * The base object interface that represents every Monkey language's value.
  */
@@ -15,6 +19,24 @@ export class MBoolean implements MObject {
 
   inspect(): string {
     return this.value.toString();
+  }
+}
+
+export class MFunction implements MObject {
+  constructor(
+    public parameters: Identifier[],
+    public body: BlockStatement,
+    /**
+     * This allows for closures, which "close over" the environment that this
+     * function is defined in, and can later access it.
+     */
+    public env: Environment,
+  ) {}
+
+  inspect(): string {
+    const parameters = this.parameters.map((p) => p.value).join(", ");
+    const body = print(this.body);
+    return `fn(${parameters}) {\n  ${body}\n}`;
   }
 }
 
