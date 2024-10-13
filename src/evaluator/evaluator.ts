@@ -4,9 +4,16 @@ import {
   Node,
   Statement,
 } from "../parser/ast.js";
+import {
+  EvaluationError,
+  TypeMismatchError,
+  UnknownOperatorError,
+} from "./error.js";
 import { Integer, MBoolean, MObject, Null, ReturnValue } from "./object.js";
 
-// NOTE: Creating constants can avoid creating new instances for the same values
+// Creating constants for these values can:
+// 1. Avoid creating new instances for the same values
+// 2. Allow strict comparison (===)
 export const TRUE = new MBoolean(true);
 export const FALSE = new MBoolean(false);
 export const NULL = new Null();
@@ -24,24 +31,38 @@ export function evaluate(node: Node): MObject {
       return evalBlockStatement(node);
     case "ExpressionStatement":
       return evaluate(node.expression);
-    case "ReturnStatement":
-      return new ReturnValue(evaluate(node.returnValue));
+    case "ReturnStatement": {
+      const returnValue = evaluate(node.returnValue);
+      if (returnValue instanceof EvaluationError) {
+        return returnValue;
+      }
+      return new ReturnValue(returnValue);
+    }
 
     // Expressions
     case "BooleanLiteral":
       return nativeBoolToBooleanObject(node.value);
     case "IfExpression":
       return evalIfExpression(node);
-    case "InfixExpression":
-      return evalInfixExpression(
-        node.operator,
-        evaluate(node.left),
-        evaluate(node.right),
-      );
+    case "InfixExpression": {
+      const [left, right] = [evaluate(node.left), evaluate(node.right)];
+      if (left instanceof EvaluationError) {
+        return left;
+      }
+      if (right instanceof EvaluationError) {
+        return right;
+      }
+      return evalInfixExpression(node.operator, left, right);
+    }
     case "IntegerLiteral":
       return new Integer(node.value);
-    case "PrefixExpression":
-      return evalPrefixExpression(node.operator, evaluate(node.right));
+    case "PrefixExpression": {
+      const right = evaluate(node.right);
+      if (right instanceof EvaluationError) {
+        return right;
+      }
+      return evalPrefixExpression(node.operator, right);
+    }
   }
 
   return NULL;
@@ -64,14 +85,32 @@ function evalBangOperatorExpression(right: MObject): MObject {
   }
 }
 
+function evalBooleanInfixExpression(
+  operator: string,
+  left: MBoolean,
+  right: MBoolean,
+): MObject {
+  switch (operator) {
+    case "==":
+      return nativeBoolToBooleanObject(left.value === right.value);
+    case "!=":
+      return nativeBoolToBooleanObject(left.value !== right.value);
+    default:
+      return new UnknownOperatorError(
+        `${left.inspect()} ${operator} ${right.inspect()}`,
+      );
+  }
+}
+
 function evalBlockStatement(block: BlockStatement): MObject {
   let result: MObject = NULL;
 
   for (const statement of block.statements) {
     result = evaluate(statement);
 
-    if (result instanceof ReturnValue) {
-      return result; // Return whole ReturnValue object instead of `result.value`
+    if (result instanceof EvaluationError || result instanceof ReturnValue) {
+      // If it's ReturnValue, we return whole object instead of `result.value`
+      return result;
     }
   }
 
@@ -80,6 +119,9 @@ function evalBlockStatement(block: BlockStatement): MObject {
 
 function evalIfExpression(node: IfExpression): MObject {
   const condition = evaluate(node.condition);
+  if (condition instanceof EvaluationError) {
+    return condition;
+  }
   if (isTruthy(condition)) {
     return evaluate(node.consequence);
   }
@@ -93,13 +135,19 @@ function evalInfixExpression(
 ): MObject {
   if (left instanceof Integer && right instanceof Integer) {
     return evalIntegerInfixExpression(operator, left, right);
-  } else if (operator === "==") {
-    return nativeBoolToBooleanObject(left === right);
-  } else if (operator === "!=") {
-    return nativeBoolToBooleanObject(left !== right);
+  }
+  if (left instanceof MBoolean && right instanceof MBoolean) {
+    return evalBooleanInfixExpression(operator, left, right);
   }
 
-  return NULL;
+  if (left.constructor.name !== right.constructor.name) {
+    return new TypeMismatchError(
+      `${left.inspect()} ${operator} ${right.inspect()}`,
+    );
+  }
+  return new UnknownOperatorError(
+    `${left.inspect()} ${operator} ${right.inspect()}`,
+  );
 }
 
 function evalIntegerInfixExpression(
@@ -125,7 +173,9 @@ function evalIntegerInfixExpression(
     case "!=":
       return nativeBoolToBooleanObject(left.value !== right.value);
     default:
-      return NULL;
+      return new UnknownOperatorError(
+        `${left.inspect()} ${operator} ${right.inspect()}`,
+      );
   }
 }
 
@@ -133,7 +183,7 @@ function evalMinusPrefixOperatorExpression(right: MObject): MObject {
   if (right instanceof Integer) {
     return new Integer(-right.value);
   }
-  return NULL;
+  return new UnknownOperatorError(`-${right.inspect()}`);
 }
 
 function evalPrefixExpression(operator: string, right: MObject): MObject {
@@ -143,7 +193,7 @@ function evalPrefixExpression(operator: string, right: MObject): MObject {
     case "-":
       return evalMinusPrefixOperatorExpression(right);
     default:
-      return NULL;
+      return new UnknownOperatorError(`${operator}${right.inspect()}`);
   }
 }
 
@@ -153,8 +203,11 @@ function evalProgram(statements: Statement[]): MObject {
   for (const statement of statements) {
     result = evaluate(statement);
 
+    // Early stopping
+    if (result instanceof EvaluationError) {
+      return result;
+    }
     if (result instanceof ReturnValue) {
-      // Stop the program and return the value
       return result.value;
     }
   }

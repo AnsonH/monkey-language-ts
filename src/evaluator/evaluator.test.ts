@@ -3,6 +3,7 @@ import Lexer from "../lexer/lexer.js";
 import Parser from "../parser/parser.js";
 import { evaluate } from "./evaluator.js";
 import { Integer, MBoolean, MObject, Null } from "./object.js";
+import { TypeMismatchError, UnknownOperatorError } from "./error.js";
 
 function evaluateProgram(input: string): MObject {
   const lexer = new Lexer(input);
@@ -186,6 +187,80 @@ describe("return statements", () => {
       const result = evaluateProgram(input);
       expect(result).toBeInstanceOf(Integer);
       expect((result as Integer).value).toBe(expected);
+    });
+  });
+});
+
+describe("error handling", () => {
+  const cases = [
+    {
+      input: "5 + true;",
+      expected: new TypeMismatchError("5 + true"),
+      description: "infix operator type mismatch",
+    },
+    {
+      input: "5 + true; 5;",
+      expected: new TypeMismatchError("5 + true"),
+      description: "type mismatch before another valid statement",
+    },
+    {
+      input: "-true",
+      expected: new UnknownOperatorError("-true"),
+      description: "minus prefix unknown operator",
+    },
+    {
+      input: "!(5 > true)",
+      expected: new TypeMismatchError("5 > true"),
+      description: "type mismatch in prefix expression",
+    },
+    {
+      input: "true + false;",
+      expected: new UnknownOperatorError("true + false"),
+      description: "unknown infix operator",
+    },
+    {
+      input: "5 + (true + false);",
+      expected: new UnknownOperatorError("true + false"),
+      description: "invalid expression in right side of infix operator",
+    },
+    {
+      input: "5; true + false; 5",
+      expected: new UnknownOperatorError("true + false"),
+      description: "error between two valid statements",
+    },
+    {
+      input: "if (10 > 1) { true + false; }",
+      expected: new UnknownOperatorError("true + false"),
+      description: "error inside a block statement",
+    },
+    {
+      input: "if (true > 1) { 10 }",
+      expected: new TypeMismatchError("true > 1"),
+      description: "error in if expression condition",
+    },
+    {
+      input: `
+        if (10 > 1) {
+          if (8 > 1) {
+            return true + false;
+          }
+          return 1;
+        }
+      `,
+      expected: new UnknownOperatorError("true + false"),
+      description: "error in the return of a nested block statement",
+    },
+    {
+      input: "return (true + false);",
+      expected: new UnknownOperatorError("true + false"),
+      description: "error in returned expression",
+    },
+  ];
+
+  cases.forEach(({ input, expected, description }) => {
+    test(`${description}`, () => {
+      const result = evaluateProgram(input);
+      expect(result).toEqual(expected);
     });
   });
 });
