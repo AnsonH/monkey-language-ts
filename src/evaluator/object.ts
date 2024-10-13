@@ -12,10 +12,8 @@ export interface MObject {
   inspect(): string;
 }
 
-// TODO(Anson): Make the `value` readonly?
-
 export class MBoolean implements MObject {
-  constructor(public value: boolean) {}
+  constructor(public readonly value: boolean) {}
 
   inspect(): string {
     return this.value.toString();
@@ -24,13 +22,13 @@ export class MBoolean implements MObject {
 
 export class MFunction implements MObject {
   constructor(
-    public parameters: Identifier[],
-    public body: BlockStatement,
+    public readonly parameters: Identifier[],
+    public readonly body: BlockStatement,
     /**
      * This allows for closures, which "close over" the environment that this
      * function is defined in, and can later access it.
      */
-    public env: Environment,
+    public readonly env: Environment,
   ) {}
 
   inspect(): string {
@@ -41,7 +39,7 @@ export class MFunction implements MObject {
 }
 
 export class Integer implements MObject {
-  constructor(public value: number) {}
+  constructor(public readonly value: number) {}
 
   inspect(): string {
     return this.value.toFixed(0);
@@ -55,7 +53,7 @@ export class Null implements MObject {
 }
 
 export class ReturnValue implements MObject {
-  constructor(public value: MObject) {}
+  constructor(public readonly value: MObject) {}
 
   inspect(): string {
     return this.value.inspect();
