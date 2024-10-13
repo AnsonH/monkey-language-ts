@@ -48,6 +48,10 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
+
+"foobar"
+""
+"if (x < 5)"
 `;
 
       const lexer = new Lexer(input);
@@ -134,6 +138,10 @@ if (5 < 10) {
         [TokenType.NotEqual, "!="],
         [TokenType.Int, "9"],
         [TokenType.Semicolon, ";"],
+
+        [TokenType.String, "foobar"],
+        [TokenType.String, ""],
+        [TokenType.String, "if (x < 5)"],
 
         [TokenType.Eof, ""],
       ];

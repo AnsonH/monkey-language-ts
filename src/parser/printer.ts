@@ -40,9 +40,10 @@ function print(node: Node): string {
       return node.value.toString();
     case "PrefixExpression":
       return `(${node.operator}${print(node.right)})`;
-    case "InfixExpression": {
+    case "InfixExpression":
       return `(${print(node.left)} ${node.operator} ${print(node.right)})`;
-    }
+    case "StringLiteral":
+      return `"${node.value}"`;
   }
 }
 

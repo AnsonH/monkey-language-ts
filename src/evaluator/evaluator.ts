@@ -19,6 +19,7 @@ import {
   MBoolean,
   MFunction,
   MObject,
+  MString,
   Null,
   ReturnValue,
 } from "./object.js";
@@ -108,6 +109,8 @@ export function evaluate(node: Node, env: Environment): MObject {
       }
       return evalPrefixExpression(node.operator, right);
     }
+    case "StringLiteral":
+      return new MString(node.value);
   }
 
   return NULL;
@@ -214,11 +217,14 @@ function evalInfixExpression(
   left: MObject,
   right: MObject,
 ): MObject {
+  if (left instanceof MBoolean && right instanceof MBoolean) {
+    return evalBooleanInfixExpression(operator, left, right);
+  }
   if (left instanceof Integer && right instanceof Integer) {
     return evalIntegerInfixExpression(operator, left, right);
   }
-  if (left instanceof MBoolean && right instanceof MBoolean) {
-    return evalBooleanInfixExpression(operator, left, right);
+  if (left instanceof MString && right instanceof MString) {
+    return evalStringInfixExpression(operator, left, right);
   }
 
   if (left.constructor.name !== right.constructor.name) {
@@ -294,6 +300,21 @@ function evalProgram(statements: Statement[], env: Environment): MObject {
   }
 
   return result;
+}
+
+function evalStringInfixExpression(
+  operator: string,
+  left: MString,
+  right: MString,
+): MObject {
+  switch (operator) {
+    case "+":
+      return new MString(left.value + right.value);
+    default:
+      return new UnknownOperatorError(
+        `${left.inspect()} ${operator} ${right.inspect()}`,
+      );
+  }
 }
 
 function extendFunctionEnv(fn: MFunction, args: MObject[]): Environment {

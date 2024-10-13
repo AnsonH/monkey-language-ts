@@ -132,6 +132,9 @@ class Lexer {
       case NULL:
         token = newToken(TokenType.Eof, "");
         break;
+      case '"':
+        token = newToken(TokenType.String, this.readString());
+        break;
       default:
         if (isLetter(this.ch)) {
           const literal = this.readIdentifier();
@@ -191,6 +194,19 @@ class Lexer {
     while (isDigit(this.ch)) {
       this.readChar();
     }
+    return this.input.substring(startPosition, this.position);
+  }
+
+  private readString(): string {
+    const startPosition = this.position + 1;
+
+    while (true) {
+      this.readChar();
+      if (this.ch === '"' || this.ch === NULL) {
+        break;
+      }
+    }
+
     return this.input.substring(startPosition, this.position);
   }
 

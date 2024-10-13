@@ -9,7 +9,14 @@ import {
   UnknownOperatorError,
 } from "./error.js";
 import { evaluate } from "./evaluator.js";
-import { Integer, MBoolean, MFunction, MObject, Null } from "./object.js";
+import {
+  Integer,
+  MBoolean,
+  MFunction,
+  MObject,
+  MString,
+  Null,
+} from "./object.js";
 
 function evaluateProgram(input: string): MObject {
   const env = new Environment();
@@ -263,6 +270,11 @@ describe("error handling", () => {
       expected: new UnknownOperatorError("true + false"),
       description: "error in returned expression",
     },
+    {
+      input: '"Hello" - "World!"',
+      expected: new UnknownOperatorError('"Hello" - "World!"'),
+      description: "unknown string infix operator",
+    },
 
     // Identifier
     {
@@ -434,5 +446,21 @@ describe("function calls", () => {
       const result = evaluateProgram(input);
       expect((result as Integer).value).toBe(expected);
     });
+  });
+});
+
+describe("strings", () => {
+  test("literals", () => {
+    const input = '"Hello World!"';
+    const result = evaluateProgram(input);
+    expect(result).toBeInstanceOf(MString);
+    expect((result as MString).value).toBe("Hello World!");
+  });
+
+  test("concatenation", () => {
+    const input = '"Hello" + " " + "World!"';
+    const result = evaluateProgram(input);
+    expect(result).toBeInstanceOf(MString);
+    expect((result as MString).value).toBe("Hello World!");
   });
 });

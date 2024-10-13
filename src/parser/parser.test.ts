@@ -502,3 +502,17 @@ describe("call expressions", () => {
     });
   });
 });
+
+test("string literals", () => {
+  const input = '"hello world"';
+  const [program] = parseProgram(input);
+  expect(program).toEqual<Program>({
+    type: "Program",
+    statements: [
+      {
+        type: "ExpressionStatement",
+        expression: { type: "StringLiteral", value: "hello world" },
+      },
+    ],
+  });
+});

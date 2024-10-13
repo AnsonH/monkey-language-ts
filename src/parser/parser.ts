@@ -16,6 +16,7 @@ import {
   Program,
   ReturnStatement,
   Statement,
+  StringLiteral,
 } from "./ast.js";
 import { NoPrefixParseFunctionError, UnexpectedTokenError } from "./error.js";
 
@@ -87,6 +88,7 @@ class Parser {
       [TokenType.False, this.parseBoolean.bind(this)],
       [TokenType.LParen, this.parseGroupedExpression.bind(this)],
       [TokenType.Function, this.parseFunctionLiteral.bind(this)],
+      [TokenType.String, this.parseStringLiteral.bind(this)],
     ]);
 
     this.infixParseFns = new Map<TokenType, InfixParseFn>([
@@ -481,6 +483,13 @@ class Parser {
     const right = this.parseExpression(Precedence.Prefix);
 
     return { type: "PrefixExpression", operator, right };
+  }
+
+  private parseStringLiteral(): StringLiteral {
+    return {
+      type: "StringLiteral",
+      value: this.currentToken.literal,
+    };
   }
 }
 

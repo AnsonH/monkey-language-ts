@@ -59,3 +59,11 @@ export class ReturnValue implements MObject {
     return this.value.inspect();
   }
 }
+
+export class MString implements MObject {
+  constructor(public readonly value: string) {}
+
+  inspect(): string {
+    return `"${this.value}"`;
+  }
+}

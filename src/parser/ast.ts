@@ -19,7 +19,8 @@ export type Expression =
   | IfExpression
   | InfixExpression
   | IntegerLiteral
-  | PrefixExpression;
+  | PrefixExpression
+  | StringLiteral;
 
 /**
  * Statement does not produce a value.
@@ -116,6 +117,14 @@ export interface InfixExpression extends BaseNode {
   left: Expression;
   operator: string;
   right: Expression;
+}
+
+/**
+ * Syntax: `"<string>"`
+ */
+export interface StringLiteral extends BaseNode {
+  type: "StringLiteral";
+  value: string;
 }
 
 /**
