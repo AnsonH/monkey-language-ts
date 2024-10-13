@@ -2,10 +2,13 @@
  * The base object interface that represents every Monkey language's value.
  */
 export interface MObject {
+  /**
+   * Returns the string representation for display.
+   */
   inspect(): string;
 }
 
-// TODO(Anson): Make the `value` protected readonly?
+// TODO(Anson): Make the `value` readonly?
 
 export class MBoolean implements MObject {
   constructor(public value: boolean) {}

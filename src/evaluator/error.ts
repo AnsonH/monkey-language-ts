@@ -11,6 +11,14 @@ export class EvaluationError extends Error implements MObject {
   }
 }
 
+export class IdentifierNotFoundError extends EvaluationError {
+  name = "IdentifierNotFoundError";
+
+  constructor(public identifier: string) {
+    super(`Identifier not found: ${identifier}`);
+  }
+}
+
 export class TypeMismatchError extends EvaluationError {
   name = "TypeMismatchError";
 

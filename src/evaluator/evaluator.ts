@@ -1,11 +1,14 @@
 import {
   BlockStatement,
+  Identifier,
   IfExpression,
   Node,
   Statement,
 } from "../parser/ast.js";
+import Environment from "./environment.js";
 import {
   EvaluationError,
+  IdentifierNotFoundError,
   TypeMismatchError,
   UnknownOperatorError,
 } from "./error.js";
@@ -21,18 +24,26 @@ export const NULL = new Null();
 /**
  * A tree-walking interpreter that evaluates the AST.
  */
-export function evaluate(node: Node): MObject {
+export function evaluate(node: Node, env: Environment): MObject {
   switch (node.type) {
     case "Program":
-      return evalProgram(node.statements);
+      return evalProgram(node.statements, env);
 
     // Statements
     case "BlockStatement":
-      return evalBlockStatement(node);
+      return evalBlockStatement(node, env);
     case "ExpressionStatement":
-      return evaluate(node.expression);
+      return evaluate(node.expression, env);
+    case "LetStatement": {
+      const value = evaluate(node.value, env);
+      if (value instanceof EvaluationError) {
+        return value;
+      }
+      env.set(node.name.value, value);
+      break;
+    }
     case "ReturnStatement": {
-      const returnValue = evaluate(node.returnValue);
+      const returnValue = evaluate(node.returnValue, env);
       if (returnValue instanceof EvaluationError) {
         return returnValue;
       }
@@ -42,13 +53,16 @@ export function evaluate(node: Node): MObject {
     // Expressions
     case "BooleanLiteral":
       return nativeBoolToBooleanObject(node.value);
+    case "Identifier":
+      return evalIdentifier(node, env);
     case "IfExpression":
-      return evalIfExpression(node);
+      return evalIfExpression(node, env);
     case "InfixExpression": {
-      const [left, right] = [evaluate(node.left), evaluate(node.right)];
+      const left = evaluate(node.left, env);
       if (left instanceof EvaluationError) {
         return left;
       }
+      const right = evaluate(node.right, env);
       if (right instanceof EvaluationError) {
         return right;
       }
@@ -57,7 +71,7 @@ export function evaluate(node: Node): MObject {
     case "IntegerLiteral":
       return new Integer(node.value);
     case "PrefixExpression": {
-      const right = evaluate(node.right);
+      const right = evaluate(node.right, env);
       if (right instanceof EvaluationError) {
         return right;
       }
@@ -102,11 +116,11 @@ function evalBooleanInfixExpression(
   }
 }
 
-function evalBlockStatement(block: BlockStatement): MObject {
+function evalBlockStatement(block: BlockStatement, env: Environment): MObject {
   let result: MObject = NULL;
 
   for (const statement of block.statements) {
-    result = evaluate(statement);
+    result = evaluate(statement, env);
 
     if (result instanceof EvaluationError || result instanceof ReturnValue) {
       // If it's ReturnValue, we return whole object instead of `result.value`
@@ -117,15 +131,23 @@ function evalBlockStatement(block: BlockStatement): MObject {
   return result;
 }
 
-function evalIfExpression(node: IfExpression): MObject {
-  const condition = evaluate(node.condition);
+function evalIdentifier(node: Identifier, env: Environment): MObject {
+  const valueObj = env.get(node.value);
+  if (!valueObj) {
+    return new IdentifierNotFoundError(node.value);
+  }
+  return valueObj;
+}
+
+function evalIfExpression(node: IfExpression, env: Environment): MObject {
+  const condition = evaluate(node.condition, env);
   if (condition instanceof EvaluationError) {
     return condition;
   }
   if (isTruthy(condition)) {
-    return evaluate(node.consequence);
+    return evaluate(node.consequence, env);
   }
-  return node.alternative ? evaluate(node.alternative) : NULL;
+  return node.alternative ? evaluate(node.alternative, env) : NULL;
 }
 
 function evalInfixExpression(
@@ -197,11 +219,11 @@ function evalPrefixExpression(operator: string, right: MObject): MObject {
   }
 }
 
-function evalProgram(statements: Statement[]): MObject {
+function evalProgram(statements: Statement[], env: Environment): MObject {
   let result: MObject = NULL;
 
   for (const statement of statements) {
-    result = evaluate(statement);
+    result = evaluate(statement, env);
 
     // Early stopping
     if (result instanceof EvaluationError) {

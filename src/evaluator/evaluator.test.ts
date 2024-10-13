@@ -3,13 +3,19 @@ import Lexer from "../lexer/lexer.js";
 import Parser from "../parser/parser.js";
 import { evaluate } from "./evaluator.js";
 import { Integer, MBoolean, MObject, Null } from "./object.js";
-import { TypeMismatchError, UnknownOperatorError } from "./error.js";
+import {
+  IdentifierNotFoundError,
+  TypeMismatchError,
+  UnknownOperatorError,
+} from "./error.js";
+import Environment from "./environment.js";
 
 function evaluateProgram(input: string): MObject {
+  const env = new Environment();
   const lexer = new Lexer(input);
   const parser = new Parser(lexer);
   const program = parser.parseProgram();
-  return evaluate(program);
+  return evaluate(program, env);
 }
 
 describe("integer expressions", () => {
@@ -193,6 +199,7 @@ describe("return statements", () => {
 
 describe("error handling", () => {
   const cases = [
+    // Type mismatch and unknown operator
     {
       input: "5 + true;",
       expected: new TypeMismatchError("5 + true"),
@@ -255,12 +262,51 @@ describe("error handling", () => {
       expected: new UnknownOperatorError("true + false"),
       description: "error in returned expression",
     },
+
+    // Identifier
+    {
+      input: "foobar",
+      expected: new IdentifierNotFoundError("foobar"),
+      description: "unknown identifier",
+    },
   ];
 
   cases.forEach(({ input, expected, description }) => {
     test(`${description}`, () => {
       const result = evaluateProgram(input);
       expect(result).toEqual(expected);
+    });
+  });
+});
+
+describe("let statements", () => {
+  const cases = [
+    {
+      input: "let a = 5; a;",
+      expected: 5,
+      description: "assigning an integer literal",
+    },
+    {
+      input: "let a = 5 * 5; a;",
+      expected: 25,
+      description: "assigning an infix expression",
+    },
+    {
+      input: "let a = 5; let b = a; a;",
+      expected: 5,
+      description: "assigning the value of another identifier",
+    },
+    {
+      input: "let a = 5; let b = a; let c = a + b + 5; c;",
+      expected: 15,
+      description: "assigning an expression using multiple identifiers",
+    },
+  ];
+
+  cases.forEach(({ input, expected, description }) => {
+    test(`${description}`, () => {
+      const result = evaluateProgram(input);
+      expect((result as Integer).value).toBe(expected);
     });
   });
 });
