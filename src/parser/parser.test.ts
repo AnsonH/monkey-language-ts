@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import Lexer from "../lexer/lexer.js";
-import print from "../printer.js";
 import { Program } from "./ast.js";
 import Parser from "./parser.js";
+import print from "./printer.js";
 
 function parseProgram(input: string): [Program, Parser] {
   const lexer = new Lexer(input);

@@ -1,5 +1,8 @@
-import { Node } from "./parser/ast.js";
+import { Node } from "./ast.js";
 
+/**
+ * Returns a string representation of the given AST node.
+ */
 function print(node: Node): string {
   switch (node.type) {
     // Statements
