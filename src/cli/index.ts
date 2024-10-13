@@ -1,4 +1,4 @@
-import { startRepl } from "../repl.js";
+import { startRepl } from "./repl.js";
 
 function run() {
   startRepl();
