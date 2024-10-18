@@ -108,11 +108,11 @@ export interface IfExpression extends BaseNode {
  *
  * Examples:
  * - `arr[0]`
- * - `[0, 1, 2][1]`
- * - `arr[1 + 2]`
+ * - `[0, 1, 2][1 + 1]`
  */
 export interface IndexExpression extends BaseNode {
   type: "IndexExpression";
+  // We only validate if `left` or `index` are valid during evaluation phase
   left: Expression;
   index: Expression;
 }

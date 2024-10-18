@@ -34,6 +34,14 @@ export class IdentifierNotFoundError extends EvaluationError {
   }
 }
 
+export class IndexOperatorNotSupported extends EvaluationError {
+  name = "IndexOperatorNotSupported";
+
+  constructor(public left: string) {
+    super(`Index operator not supported: ${left}`);
+  }
+}
+
 export class NotAFunctionError extends EvaluationError {
   name = "NotAFunctionError";
 

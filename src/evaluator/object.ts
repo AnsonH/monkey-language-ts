@@ -30,6 +30,15 @@ export class Builtin implements MObject {
   }
 }
 
+export class MArray implements MObject {
+  constructor(public readonly elements: MObject[]) {}
+
+  inspect(): string {
+    const elements = this.elements.map((e) => e.inspect());
+    return `[${elements.join(", ")}]`;
+  }
+}
+
 export class MFunction implements MObject {
   constructor(
     public readonly parameters: Identifier[],

@@ -10,9 +10,10 @@ import {
   TypeMismatchError,
   UnknownOperatorError,
 } from "./error.js";
-import { evaluate } from "./evaluator.js";
+import { evaluate, NULL } from "./evaluator.js";
 import {
   Integer,
+  MArray,
   MBoolean,
   MFunction,
   MObject,
@@ -464,6 +465,78 @@ describe("strings", () => {
     const result = evaluateProgram(input);
     expect(result).toBeInstanceOf(MString);
     expect((result as MString).value).toBe("Hello World!");
+  });
+});
+
+describe("arrays", () => {
+  test("literals", () => {
+    const input = "[1, 2 * 2, 3 + 3]";
+    const result = evaluateProgram(input);
+    expect(result).toEqual(
+      new MArray([new Integer(1), new Integer(4), new Integer(6)]),
+    );
+  });
+
+  describe("index expressions", () => {
+    const cases = [
+      {
+        input: "[1, 2, 3][0]",
+        expected: new Integer(1),
+        description: "index of 0",
+      },
+      {
+        input: "[1, 2, 3][1]",
+        expected: new Integer(2),
+        description: "index of 1",
+      },
+      {
+        input: "[1, 2, 3][2]",
+        expected: new Integer(3),
+        description: "index of 2",
+      },
+      {
+        input: "let i = 0; [1][i]",
+        expected: new Integer(1),
+        description: "identifier as index",
+      },
+      {
+        input: "[1, 2, 3][1 + 1]",
+        expected: new Integer(3),
+        description: "arithmetic inside index",
+      },
+      {
+        input: "let myArray = [1, 2, 3]; myArray[2]",
+        expected: new Integer(3),
+        description: "identifier as left side",
+      },
+      {
+        input: "let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];",
+        expected: new Integer(6),
+        description: "used in an expression",
+      },
+      {
+        input: "[0, fn(x, y) { x + y }, 2][1](3, 4)",
+        expected: new Integer(7),
+        description: "calling a function from an array",
+      },
+      {
+        input: "[1, 2, 3][3]",
+        expected: NULL,
+        description: "positive out-of-bounds index",
+      },
+      {
+        input: "[1, 2, 3][-1]",
+        expected: NULL,
+        description: "negative out-of-bounds index",
+      },
+    ];
+
+    cases.forEach(({ input, expected, description }) => {
+      test(`${description}`, () => {
+        const result = evaluateProgram(input);
+        expect(result).toEqual(expected);
+      });
+    });
   });
 });
 

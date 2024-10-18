@@ -11,6 +11,7 @@ import Environment from "./environment.js";
 import {
   EvaluationError,
   IdentifierNotFoundError,
+  IndexOperatorNotSupported,
   NotAFunctionError,
   TypeMismatchError,
   UnknownOperatorError,
@@ -18,6 +19,7 @@ import {
 import {
   Builtin,
   Integer,
+  MArray,
   MBoolean,
   MFunction,
   MObject,
@@ -48,6 +50,7 @@ export function evaluate(node: Node, env: Environment): MObject {
       return evaluate(node.expression, env);
     case "LetStatement": {
       const value = evaluate(node.value, env);
+      // TODO: Extract out `isError` function to reduce verbosity
       if (value instanceof EvaluationError) {
         return value;
       }
@@ -63,6 +66,13 @@ export function evaluate(node: Node, env: Environment): MObject {
     }
 
     // Expressions
+    case "ArrayLiteral": {
+      const elements = evalExpressions(node.elements, env);
+      if (elements.length === 1 && elements[0] instanceof EvaluationError) {
+        return elements[0];
+      }
+      return new MArray(elements);
+    }
     case "BooleanLiteral":
       return nativeBoolToBooleanObject(node.value);
     case "CallExpression": {
@@ -93,6 +103,17 @@ export function evaluate(node: Node, env: Environment): MObject {
       return evalIdentifier(node, env);
     case "IfExpression":
       return evalIfExpression(node, env);
+    case "IndexExpression": {
+      const left = evaluate(node.left, env);
+      if (left instanceof EvaluationError) {
+        return left;
+      }
+      const index = evaluate(node.index, env);
+      if (index instanceof EvaluationError) {
+        return index;
+      }
+      return evalIndexExpression(left, index);
+    }
     case "InfixExpression": {
       const left = evaluate(node.left, env);
       if (left instanceof EvaluationError) {
@@ -185,6 +206,15 @@ function evalBlockStatement(block: BlockStatement, env: Environment): MObject {
   return result;
 }
 
+/**
+ * If the index is out of bounds, it'll evaluate to `null`.
+ */
+function evalArrayIndexExpression(array: MArray, index: Integer): MObject {
+  const idx = index.value;
+  const max = array.elements.length - 1;
+  return idx < 0 || idx > max ? NULL : array.elements[idx];
+}
+
 function evalExpressions(exps: Expression[], env: Environment): MObject[] {
   const result: MObject[] = [];
 
@@ -222,6 +252,13 @@ function evalIfExpression(node: IfExpression, env: Environment): MObject {
     return evaluate(node.consequence, env);
   }
   return node.alternative ? evaluate(node.alternative, env) : NULL;
+}
+
+function evalIndexExpression(left: MObject, index: MObject): MObject {
+  if (left instanceof MArray && index instanceof Integer) {
+    return evalArrayIndexExpression(left, index);
+  }
+  return new IndexOperatorNotSupported(left.inspect());
 }
 
 function evalInfixExpression(
