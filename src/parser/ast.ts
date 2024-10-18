@@ -18,6 +18,7 @@ export type Expression =
   | FunctionLiteral
   | Identifier
   | IfExpression
+  | IndexExpression
   | InfixExpression
   | IntegerLiteral
   | PrefixExpression
@@ -100,6 +101,20 @@ export interface IfExpression extends BaseNode {
   condition: Expression;
   consequence: BlockStatement;
   alternative: BlockStatement | null;
+}
+
+/**
+ * Syntax: `<expression>[<expression>]`
+ *
+ * Examples:
+ * - `arr[0]`
+ * - `[0, 1, 2][1]`
+ * - `arr[1 + 2]`
+ */
+export interface IndexExpression extends BaseNode {
+  type: "IndexExpression";
+  left: Expression;
+  index: Expression;
 }
 
 export interface IntegerLiteral extends BaseNode {

@@ -10,6 +10,7 @@ import {
   FunctionLiteral,
   Identifier,
   IfExpression,
+  IndexExpression,
   InfixExpression,
   IntegerLiteral,
   LetStatement,
@@ -41,6 +42,7 @@ enum Precedence {
   Product, // *
   Prefix, // -X or !X
   Call, // myFunction(X)
+  Index, // array[index]
 }
 
 const precedences = new Map<TokenType, Precedence>([
@@ -53,6 +55,7 @@ const precedences = new Map<TokenType, Precedence>([
   [TokenType.Slash, Precedence.Product],
   [TokenType.Asterisk, Precedence.Product],
   [TokenType.LParen, Precedence.Call],
+  [TokenType.LBracket, Precedence.Index],
 ]);
 
 /**
@@ -93,6 +96,8 @@ class Parser {
       [TokenType.LBracket, this.parseArrayLiteral.bind(this)],
     ]);
 
+    // NOTE: infixParseFns don't necessarily output `InfixExpression`, for example
+    // `(` is an infix operator for function calls
     this.infixParseFns = new Map<TokenType, InfixParseFn>([
       [TokenType.Plus, this.parseInfixExpression.bind(this)],
       [TokenType.Minus, this.parseInfixExpression.bind(this)],
@@ -103,6 +108,7 @@ class Parser {
       [TokenType.LessThan, this.parseInfixExpression.bind(this)],
       [TokenType.GreaterThan, this.parseInfixExpression.bind(this)],
       [TokenType.LParen, this.parseCallExpression.bind(this)],
+      [TokenType.LBracket, this.parseIndexExpression.bind(this)],
     ]);
   }
 
@@ -471,6 +477,20 @@ class Parser {
     }
 
     return { type: "IfExpression", condition, consequence, alternative };
+  }
+
+  /**
+   * @throws UnexpectedTokenError if syntax is incorrect
+   */
+  private parseIndexExpression(left: Expression): IndexExpression {
+    this.nextToken(); // Consume `[`
+    const index = this.parseExpression(Precedence.Lowest);
+
+    if (!this.expectPeek(TokenType.RBracket)) {
+      throw new UnexpectedTokenError(TokenType.RBracket, this.peekToken.type);
+    }
+
+    return { type: "IndexExpression", left, index };
   }
 
   private parseInfixExpression(left: Expression): InfixExpression {

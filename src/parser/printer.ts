@@ -40,6 +40,8 @@ function print(node: Node): string {
       const elseBranch = alternative ? `else ${print(alternative)}` : "";
       return ifBranch + elseBranch;
     }
+    case "IndexExpression":
+      return `(${print(node.left)}[${print(node.index)}])`;
     case "IntegerLiteral":
       return node.value.toString();
     case "PrefixExpression":
