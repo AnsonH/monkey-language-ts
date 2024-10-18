@@ -4,6 +4,8 @@ import { BlockStatement, Identifier } from "../parser/ast.js";
 import Parser from "../parser/parser.js";
 import Environment from "./environment.js";
 import {
+  ArgumentNotSupportedError,
+  ArgumentWrongNumberError,
   IdentifierNotFoundError,
   TypeMismatchError,
   UnknownOperatorError,
@@ -462,5 +464,35 @@ describe("strings", () => {
     const result = evaluateProgram(input);
     expect(result).toBeInstanceOf(MString);
     expect((result as MString).value).toBe("Hello World!");
+  });
+});
+
+describe("builtin functions", () => {
+  describe("len", () => {
+    test("empty string returns 0", () => {
+      const input = 'len("")';
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(Integer);
+      expect((result as Integer).value).toBe(0);
+    });
+
+    test("non-empty string returns correct length", () => {
+      const input = 'len("hello world")';
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(Integer);
+      expect((result as Integer).value).toBe(11);
+    });
+
+    test("unsupported argument type", () => {
+      const input = "len(1)";
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(ArgumentNotSupportedError);
+    });
+
+    test("wrong number of arguments", () => {
+      const input = 'len("one", "two")';
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new ArgumentWrongNumberError(1, 2));
+    });
   });
 });

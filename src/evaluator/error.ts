@@ -11,6 +11,21 @@ export class EvaluationError extends Error implements MObject {
   }
 }
 
+export class ArgumentNotSupportedError extends EvaluationError {
+  name = "ArgumentNotSupportedError";
+}
+
+export class ArgumentWrongNumberError extends EvaluationError {
+  name = "ArgumentWrongNumberError";
+
+  constructor(
+    public expected: number,
+    public got: number,
+  ) {
+    super(`Wrong number of arguments: expected ${expected}, got ${got}`);
+  }
+}
+
 export class IdentifierNotFoundError extends EvaluationError {
   name = "IdentifierNotFoundError";
 

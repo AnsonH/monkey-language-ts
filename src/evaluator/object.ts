@@ -20,6 +20,16 @@ export class MBoolean implements MObject {
   }
 }
 
+type BuiltinFunction = (...args: MObject[]) => MObject;
+
+export class Builtin implements MObject {
+  constructor(public readonly fn: BuiltinFunction) {}
+
+  inspect(): string {
+    return "builtin function";
+  }
+}
+
 export class MFunction implements MObject {
   constructor(
     public readonly parameters: Identifier[],

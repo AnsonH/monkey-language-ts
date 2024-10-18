@@ -6,6 +6,7 @@ import {
   Node,
   Statement,
 } from "../parser/ast.js";
+import builtins from "./builtins.js";
 import Environment from "./environment.js";
 import {
   EvaluationError,
@@ -15,6 +16,7 @@ import {
   UnknownOperatorError,
 } from "./error.js";
 import {
+  Builtin,
   Integer,
   MBoolean,
   MFunction,
@@ -81,6 +83,8 @@ export function evaluate(node: Node, env: Environment): MObject {
         return args[0];
       }
 
+      // TODO: Check for ArgumentWrongNumberError
+
       return applyFunction(fn, args);
     }
     case "FunctionLiteral":
@@ -121,13 +125,15 @@ export function evaluate(node: Node, env: Environment): MObject {
  * @param fn Only object of type {@link MFunction} is considered valid
  */
 function applyFunction(fn: MObject, args: MObject[]): MObject {
-  if (!(fn instanceof MFunction)) {
-    return new NotAFunctionError(fn.inspect());
+  if (fn instanceof MFunction) {
+    const extendedEnv = extendFunctionEnv(fn, args);
+    const evaluated = evaluate(fn.body, extendedEnv);
+    return unwrapReturnValue(evaluated);
   }
-
-  const extendedEnv = extendFunctionEnv(fn, args);
-  const evaluated = evaluate(fn.body, extendedEnv);
-  return unwrapReturnValue(evaluated);
+  if (fn instanceof Builtin) {
+    return fn.fn(...args);
+  }
+  return new NotAFunctionError(fn.inspect());
 }
 
 function evalBangOperatorExpression(right: MObject): MObject {
@@ -195,10 +201,16 @@ function evalExpressions(exps: Expression[], env: Environment): MObject[] {
 
 function evalIdentifier(node: Identifier, env: Environment): MObject {
   const valueObj = env.get(node.value);
-  if (!valueObj) {
-    return new IdentifierNotFoundError(node.value);
+  if (valueObj) {
+    return valueObj;
   }
-  return valueObj;
+
+  const builtin: Builtin | undefined = builtins[node.value];
+  if (builtin) {
+    return builtin;
+  }
+
+  return new IdentifierNotFoundError(node.value);
 }
 
 function evalIfExpression(node: IfExpression, env: Environment): MObject {
