@@ -17,6 +17,10 @@ function print(node: Node): string {
       return `return ${print(node.returnValue)};`;
 
     // Expressions
+    case "ArrayLiteral": {
+      const elements = node.elements.map(print).join(", ");
+      return `[${elements}]`;
+    }
     case "BooleanLiteral":
       return node.value.toString();
     case "CallExpression": {

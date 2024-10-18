@@ -1,6 +1,7 @@
 import Lexer from "../lexer/lexer.js";
 import { Token, TokenType } from "../lexer/token.js";
 import {
+  ArrayLiteral,
   BlockStatement,
   BooleanLiteral,
   CallExpression,
@@ -89,6 +90,7 @@ class Parser {
       [TokenType.LParen, this.parseGroupedExpression.bind(this)],
       [TokenType.Function, this.parseFunctionLiteral.bind(this)],
       [TokenType.String, this.parseStringLiteral.bind(this)],
+      [TokenType.LBracket, this.parseArrayLiteral.bind(this)],
     ]);
 
     this.infixParseFns = new Map<TokenType, InfixParseFn>([
@@ -257,33 +259,14 @@ class Parser {
 
   /**
    * `currentToken` value:
-   * - Before parsing: Opening `(`
-   * - After parsing: Closing `)`
+   * - Before parsing: Opening `[`
+   * - After parsing: Closing `]`
    *
    * @throws UnexpectedTokenError if syntax is incorrect
    */
-  // TODO: It's very similar to `parseFunctionParameters`, consider refactoring
-  private parseCallArguments(): Expression[] {
-    if (this.isPeekToken(TokenType.RParen)) {
-      this.nextToken();
-      return [];
-    }
-
-    this.nextToken();
-
-    const args: Expression[] = [this.parseExpression(Precedence.Lowest)];
-
-    while (this.isPeekToken(TokenType.Comma)) {
-      this.nextToken(); // Move to `,`
-      this.nextToken(); // Move to next argument
-      args.push(this.parseExpression(Precedence.Lowest));
-    }
-
-    if (!this.expectPeek(TokenType.RParen)) {
-      throw new UnexpectedTokenError(TokenType.RParen, this.peekToken.type);
-    }
-
-    return args;
+  private parseArrayLiteral(): ArrayLiteral {
+    const elements = this.parseExpressionList(TokenType.RBracket);
+    return { type: "ArrayLiteral", elements };
   }
 
   /**
@@ -297,7 +280,7 @@ class Parser {
    *  infix position
    */
   private parseCallExpression(fn: Expression): CallExpression {
-    const args = this.parseCallArguments();
+    const args = this.parseExpressionList(TokenType.RParen);
     return { type: "CallExpression", function: fn, arguments: args };
   }
 
@@ -341,6 +324,38 @@ class Parser {
     }
 
     return leftExp;
+  }
+
+  /**
+   * Parses a comma-separated list of expressions.
+   *
+   * `this.currentToken` should be one token before the first element or the
+   * `end` token when it is called (e.g. the starting bracket).
+   *
+   * @param end The token marking the list's end.
+   * @throws UnexpectedTokenError if `end` is not found.
+   */
+  private parseExpressionList(end: TokenType): Expression[] {
+    if (this.isPeekToken(end)) {
+      this.nextToken();
+      return [];
+    }
+
+    this.nextToken(); // Move to first element
+
+    const list: Expression[] = [this.parseExpression(Precedence.Lowest)];
+
+    while (this.isPeekToken(TokenType.Comma)) {
+      this.nextToken(); // Move to `,`
+      this.nextToken(); // Move to next expression or `end` token
+      list.push(this.parseExpression(Precedence.Lowest));
+    }
+
+    if (!this.expectPeek(end)) {
+      throw new UnexpectedTokenError(end, this.peekToken.type);
+    }
+
+    return list;
   }
 
   private parseBoolean(): BooleanLiteral {

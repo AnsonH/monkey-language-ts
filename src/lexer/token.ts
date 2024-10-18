@@ -29,10 +29,13 @@ export enum TokenType {
   Comma = ",",
   Semicolon = ";",
 
+  // Brackets
   LParen = "(",
   RParen = ")",
   LBrace = "{",
   RBrace = "}",
+  LBracket = "[",
+  RBracket = "]",
 
   // Keywords
   Function = "FUNCTION",

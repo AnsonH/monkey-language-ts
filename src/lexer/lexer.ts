@@ -129,6 +129,12 @@ class Lexer {
       case "}":
         token = newToken(TokenType.RBrace, this.ch);
         break;
+      case "[":
+        token = newToken(TokenType.LBracket, this.ch);
+        break;
+      case "]":
+        token = newToken(TokenType.RBracket, this.ch);
+        break;
       case NULL:
         token = newToken(TokenType.Eof, "");
         break;

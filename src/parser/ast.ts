@@ -12,6 +12,7 @@ export type Node = Program | Expression | Statement;
  * Expression produces a value.
  */
 export type Expression =
+  | ArrayLiteral
   | BooleanLiteral
   | CallExpression
   | FunctionLiteral
@@ -37,6 +38,16 @@ export type Statement =
 export interface Program extends BaseNode {
   type: "Program";
   statements: Statement[];
+}
+
+/**
+ * Syntax: `[<element1>, <element2>, ...]`
+ *
+ * Example: `[1, 2 + 3, fn(x) { x }, add(4)]`
+ */
+export interface ArrayLiteral extends BaseNode {
+  type: "ArrayLiteral";
+  elements: Expression[];
 }
 
 export interface BooleanLiteral extends BaseNode {

@@ -516,3 +516,62 @@ test("string literals", () => {
     ],
   });
 });
+
+describe("array literals", () => {
+  test("empty array", () => {
+    const input = "[]";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: { type: "ArrayLiteral", elements: [] },
+        },
+      ],
+    });
+  });
+
+  test("array with single element", () => {
+    const input = "[1]";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "ArrayLiteral",
+            elements: [{ type: "IntegerLiteral", value: 1 }],
+          },
+        },
+      ],
+    });
+  });
+
+  test("array with multiple elements of mixed type", () => {
+    const input = '[1, "two", 3 + 4]';
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "ArrayLiteral",
+            elements: [
+              { type: "IntegerLiteral", value: 1 },
+              { type: "StringLiteral", value: "two" },
+              {
+                type: "InfixExpression",
+                left: { type: "IntegerLiteral", value: 3 },
+                operator: "+",
+                right: { type: "IntegerLiteral", value: 4 },
+              },
+            ],
+          },
+        },
+      ],
+    });
+  });
+});

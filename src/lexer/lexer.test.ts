@@ -52,6 +52,8 @@ if (5 < 10) {
 "foobar"
 ""
 "if (x < 5)"
+
+[1, 2];
 `;
 
       const lexer = new Lexer(input);
@@ -142,6 +144,13 @@ if (5 < 10) {
         [TokenType.String, "foobar"],
         [TokenType.String, ""],
         [TokenType.String, "if (x < 5)"],
+
+        [TokenType.LBracket, "["],
+        [TokenType.Int, "1"],
+        [TokenType.Comma, ","],
+        [TokenType.Int, "2"],
+        [TokenType.RBracket, "]"],
+        [TokenType.Semicolon, ";"],
 
         [TokenType.Eof, ""],
       ];
