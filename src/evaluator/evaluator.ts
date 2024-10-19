@@ -54,8 +54,7 @@ export function evaluate(node: Node, env: Environment): MObject {
       return evaluate(node.expression, env);
     case "LetStatement": {
       const value = evaluate(node.value, env);
-      // TODO: Extract out `isError` function to reduce verbosity
-      if (value instanceof EvaluationError) {
+      if (isError(value)) {
         return value;
       }
       env.set(node.name.value, value);
@@ -63,7 +62,7 @@ export function evaluate(node: Node, env: Environment): MObject {
     }
     case "ReturnStatement": {
       const returnValue = evaluate(node.returnValue, env);
-      if (returnValue instanceof EvaluationError) {
+      if (isError(returnValue)) {
         return returnValue;
       }
       return new ReturnValue(returnValue);
@@ -72,7 +71,7 @@ export function evaluate(node: Node, env: Environment): MObject {
     // Expressions
     case "ArrayLiteral": {
       const elements = evalExpressions(node.elements, env);
-      if (elements.length === 1 && elements[0] instanceof EvaluationError) {
+      if (elements.length === 1 && isError(elements[0])) {
         return elements[0];
       }
       return new MArray(elements);
@@ -88,12 +87,12 @@ export function evaluate(node: Node, env: Environment): MObject {
        *   literal to get {@link MFunction}.
        */
       const fn = evaluate(node.function, env);
-      if (fn instanceof EvaluationError) {
+      if (isError(fn)) {
         return fn;
       }
 
       const args = evalExpressions(node.arguments, env);
-      if (args.length === 1 && args[0] instanceof EvaluationError) {
+      if (args.length === 1 && isError(args[0])) {
         return args[0];
       }
 
@@ -111,22 +110,22 @@ export function evaluate(node: Node, env: Environment): MObject {
       return evalIfExpression(node, env);
     case "IndexExpression": {
       const left = evaluate(node.left, env);
-      if (left instanceof EvaluationError) {
+      if (isError(left)) {
         return left;
       }
       const index = evaluate(node.index, env);
-      if (index instanceof EvaluationError) {
+      if (isError(index)) {
         return index;
       }
       return evalIndexExpression(left, index);
     }
     case "InfixExpression": {
       const left = evaluate(node.left, env);
-      if (left instanceof EvaluationError) {
+      if (isError(left)) {
         return left;
       }
       const right = evaluate(node.right, env);
-      if (right instanceof EvaluationError) {
+      if (isError(right)) {
         return right;
       }
       return evalInfixExpression(node.operator, left, right);
@@ -135,7 +134,7 @@ export function evaluate(node: Node, env: Environment): MObject {
       return new Integer(node.value);
     case "PrefixExpression": {
       const right = evaluate(node.right, env);
-      if (right instanceof EvaluationError) {
+      if (isError(right)) {
         return right;
       }
       return evalPrefixExpression(node.operator, right);
@@ -203,7 +202,7 @@ function evalBlockStatement(block: BlockStatement, env: Environment): MObject {
   for (const statement of block.statements) {
     result = evaluate(statement, env);
 
-    if (result instanceof EvaluationError || result instanceof ReturnValue) {
+    if (isError(result) || result instanceof ReturnValue) {
       // If it's ReturnValue, we return whole object instead of `result.value`
       return result;
     }
@@ -226,7 +225,7 @@ function evalExpressions(exps: Expression[], env: Environment): MObject[] {
 
   for (const exp of exps) {
     const evaluated = evaluate(exp, env);
-    if (evaluated instanceof EvaluationError) {
+    if (isError(evaluated)) {
       return [evaluated];
     }
     result.push(evaluated);
@@ -258,7 +257,7 @@ function evalHashLiteral(node: HashLiteral, env: Environment): MObject {
 
   for (const [keyNode, valueNode] of node.pairs) {
     const key = evaluate(keyNode, env);
-    if (key instanceof EvaluationError) {
+    if (isError(key)) {
       return key;
     }
     if (
@@ -272,7 +271,7 @@ function evalHashLiteral(node: HashLiteral, env: Environment): MObject {
     }
 
     const value = evaluate(valueNode, env);
-    if (value instanceof EvaluationError) {
+    if (isError(value)) {
       return value;
     }
 
@@ -298,7 +297,7 @@ function evalIdentifier(node: Identifier, env: Environment): MObject {
 
 function evalIfExpression(node: IfExpression, env: Environment): MObject {
   const condition = evaluate(node.condition, env);
-  if (condition instanceof EvaluationError) {
+  if (isError(condition)) {
     return condition;
   }
   if (isTruthy(condition)) {
@@ -396,7 +395,7 @@ function evalProgram(statements: Statement[], env: Environment): MObject {
     result = evaluate(statement, env);
 
     // Early stopping
-    if (result instanceof EvaluationError) {
+    if (isError(result)) {
       return result;
     }
     if (result instanceof ReturnValue) {
@@ -428,6 +427,10 @@ function extendFunctionEnv(fn: MFunction, args: MObject[]): Environment {
     env.set(param.value, args[idx]);
   });
   return env;
+}
+
+function isError(obj: MObject): obj is EvaluationError {
+  return obj instanceof EvaluationError;
 }
 
 /**
