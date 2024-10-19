@@ -556,6 +556,20 @@ describe("builtin functions", () => {
       expect((result as Integer).value).toBe(11);
     });
 
+    test("empty array returns 0", () => {
+      const input = "len([])";
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(Integer);
+      expect((result as Integer).value).toBe(0);
+    });
+
+    test("non-empty array returns correct length", () => {
+      const input = "len([1, 2, 3])";
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(Integer);
+      expect((result as Integer).value).toBe(3);
+    });
+
     test("unsupported argument type", () => {
       const input = "len(1)";
       const result = evaluateProgram(input);
@@ -566,6 +580,112 @@ describe("builtin functions", () => {
       const input = 'len("one", "two")';
       const result = evaluateProgram(input);
       expect(result).toEqual(new ArgumentWrongNumberError(1, 2));
+    });
+  });
+
+  describe("first", () => {
+    test("empty array returns null", () => {
+      const input = "first([])";
+      const result = evaluateProgram(input);
+      expect(result).toBe(NULL);
+    });
+
+    test("non-empty array returns first element", () => {
+      const input = "first([1, 2, 3])";
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new Integer(1));
+    });
+
+    test("unsupported argument type", () => {
+      const input = 'first("hello")';
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(ArgumentNotSupportedError);
+    });
+
+    test("wrong number of arguments", () => {
+      const input = 'first([1, 2], "two")';
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new ArgumentWrongNumberError(1, 2));
+    });
+  });
+
+  describe("last", () => {
+    test("empty array returns null", () => {
+      const input = "last([])";
+      const result = evaluateProgram(input);
+      expect(result).toBe(NULL);
+    });
+
+    test("non-empty array returns last element", () => {
+      const input = "last([1, 2, 3])";
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new Integer(3));
+    });
+
+    test("unsupported argument type", () => {
+      const input = 'last("hello")';
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(ArgumentNotSupportedError);
+    });
+
+    test("wrong number of arguments", () => {
+      const input = 'last([1, 2], "two")';
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new ArgumentWrongNumberError(1, 2));
+    });
+  });
+
+  describe("rest", () => {
+    test("empty array returns null", () => {
+      const input = "rest([])";
+      const result = evaluateProgram(input);
+      expect(result).toBe(NULL);
+    });
+
+    test("non-empty array returns new copy without first element", () => {
+      const input = "rest([1, 2, 3])";
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new MArray([new Integer(2), new Integer(3)]));
+    });
+
+    test("unsupported argument type", () => {
+      const input = 'rest("hello")';
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(ArgumentNotSupportedError);
+    });
+
+    test("wrong number of arguments", () => {
+      const input = 'rest([1, 2], "two")';
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new ArgumentWrongNumberError(1, 2));
+    });
+  });
+
+  describe("push", () => {
+    test("new element is added at the end of array", () => {
+      const input = "push([1, 2], 3)";
+      const result = evaluateProgram(input);
+      expect(result).toEqual(
+        new MArray([new Integer(1), new Integer(2), new Integer(3)]),
+      );
+    });
+
+    test("original array is not modified", () => {
+      const input = "let a = [1, 2]; push(a, 3); a";
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new MArray([new Integer(1), new Integer(2)]));
+    });
+
+    test("unsupported argument type", () => {
+      const input = 'push("hello", 1)';
+      const result = evaluateProgram(input);
+      expect(result).toBeInstanceOf(ArgumentNotSupportedError);
+    });
+
+    test("wrong number of arguments", () => {
+      const input = "push([1, 2], 3, 4)";
+      const result = evaluateProgram(input);
+      expect(result).toEqual(new ArgumentWrongNumberError(2, 3));
     });
   });
 });
