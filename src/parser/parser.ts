@@ -8,6 +8,7 @@ import {
   Expression,
   ExpressionStatement,
   FunctionLiteral,
+  HashLiteral,
   Identifier,
   IfExpression,
   IndexExpression,
@@ -94,6 +95,7 @@ class Parser {
       [TokenType.Function, this.parseFunctionLiteral.bind(this)],
       [TokenType.String, this.parseStringLiteral.bind(this)],
       [TokenType.LBracket, this.parseArrayLiteral.bind(this)],
+      [TokenType.LBrace, this.parseHashLiteral.bind(this)],
     ]);
 
     // NOTE: infixParseFns don't necessarily output `InfixExpression`, for example
@@ -437,6 +439,35 @@ class Parser {
     }
 
     return expression;
+  }
+
+  private parseHashLiteral(): HashLiteral {
+    const pairs = new Map<Expression, Expression>();
+
+    while (!this.isPeekToken(TokenType.RBrace)) {
+      this.nextToken(); // Consumes starting `{`, or `,` from previous iteration
+
+      const key = this.parseExpression(Precedence.Lowest);
+
+      if (!this.expectPeek(TokenType.Colon)) {
+        throw new UnexpectedTokenError(TokenType.Colon, this.peekToken.type);
+      }
+      this.nextToken(); // Consume `:`
+
+      const value = this.parseExpression(Precedence.Lowest);
+      pairs.set(key, value);
+
+      const isLastPair = this.isPeekToken(TokenType.RBrace);
+      if (!isLastPair && !this.expectPeek(TokenType.Comma)) {
+        throw new UnexpectedTokenError(TokenType.Comma, this.peekToken.type);
+      }
+    }
+
+    if (!this.expectPeek(TokenType.RBrace)) {
+      throw new UnexpectedTokenError(TokenType.RBrace, this.peekToken.type);
+    }
+
+    return { type: "HashLiteral", pairs };
   }
 
   private parseIdentifier(): Identifier {

@@ -32,6 +32,13 @@ function print(node: Node): string {
       const body = print(node.body);
       return `fn (${parameters}) ${body}`;
     }
+    case "HashLiteral": {
+      const entries: string[] = [];
+      node.pairs.forEach((value, key) => {
+        entries.push(`${print(key)}: ${print(value)}`);
+      });
+      return `{${entries.join(", ")}}`;
+    }
     case "Identifier":
       return node.value;
     case "IfExpression": {

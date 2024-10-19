@@ -1,6 +1,7 @@
 import {
   BlockStatement,
   Expression,
+  HashLiteral,
   Identifier,
   IfExpression,
   Node,
@@ -12,12 +13,15 @@ import {
   EvaluationError,
   IdentifierNotFoundError,
   IndexOperatorNotSupported,
+  InvalidHashKeyError,
   NotAFunctionError,
   TypeMismatchError,
   UnknownOperatorError,
 } from "./error.js";
 import {
   Builtin,
+  Hash,
+  HashPairs,
   Integer,
   MArray,
   MBoolean,
@@ -99,6 +103,8 @@ export function evaluate(node: Node, env: Environment): MObject {
     }
     case "FunctionLiteral":
       return new MFunction(node.parameters, node.body, env);
+    case "HashLiteral":
+      return evalHashLiteral(node, env);
     case "Identifier":
       return evalIdentifier(node, env);
     case "IfExpression":
@@ -229,6 +235,53 @@ function evalExpressions(exps: Expression[], env: Environment): MObject[] {
   return result;
 }
 
+/**
+ * If the index is not found in the hash, it'll evaluate to `null`.
+ */
+function evalHashIndexExpression(hash: Hash, index: MObject): MObject {
+  if (
+    !(
+      index instanceof MString ||
+      index instanceof Integer ||
+      index instanceof MBoolean
+    )
+  ) {
+    return new InvalidHashKeyError(index.inspect());
+  }
+
+  const pair = hash.pairs.get(index.inspect());
+  return pair ? pair.value : NULL;
+}
+
+function evalHashLiteral(node: HashLiteral, env: Environment): MObject {
+  const pairs: HashPairs = new Map();
+
+  for (const [keyNode, valueNode] of node.pairs) {
+    const key = evaluate(keyNode, env);
+    if (key instanceof EvaluationError) {
+      return key;
+    }
+    if (
+      !(
+        key instanceof MString ||
+        key instanceof Integer ||
+        key instanceof MBoolean
+      )
+    ) {
+      return new InvalidHashKeyError(key.inspect());
+    }
+
+    const value = evaluate(valueNode, env);
+    if (value instanceof EvaluationError) {
+      return value;
+    }
+
+    pairs.set(key.inspect(), { key, value });
+  }
+
+  return new Hash(pairs);
+}
+
 function evalIdentifier(node: Identifier, env: Environment): MObject {
   const valueObj = env.get(node.value);
   if (valueObj) {
@@ -257,6 +310,9 @@ function evalIfExpression(node: IfExpression, env: Environment): MObject {
 function evalIndexExpression(left: MObject, index: MObject): MObject {
   if (left instanceof MArray && index instanceof Integer) {
     return evalArrayIndexExpression(left, index);
+  }
+  if (left instanceof Hash) {
+    return evalHashIndexExpression(left, index);
   }
   return new IndexOperatorNotSupported(left.inspect());
 }

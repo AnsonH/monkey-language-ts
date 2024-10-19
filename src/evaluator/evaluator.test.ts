@@ -7,11 +7,15 @@ import {
   ArgumentNotSupportedError,
   ArgumentWrongNumberError,
   IdentifierNotFoundError,
+  IndexOperatorNotSupported,
+  InvalidHashKeyError,
   TypeMismatchError,
   UnknownOperatorError,
 } from "./error.js";
 import { evaluate, NULL } from "./evaluator.js";
 import {
+  Hash,
+  HashPair,
   Integer,
   MArray,
   MBoolean,
@@ -285,6 +289,25 @@ describe("error handling", () => {
       expected: new IdentifierNotFoundError("foobar"),
       description: "unknown identifier",
     },
+
+    // Index expression
+    {
+      input: '"Hello"[0]',
+      expected: new IndexOperatorNotSupported('"Hello"'),
+      description: "unsupported index expression",
+    },
+
+    // Hash literal
+    {
+      input: "{ fn(x) { x }: 5}",
+      expected: new InvalidHashKeyError("fn(x) {\n  x;\n}"),
+      description: "invalid hash key type",
+    },
+    {
+      input: '{"name": "Monkey"}[fn(x) { x }];',
+      expected: new InvalidHashKeyError("fn(x) {\n  x;\n}"),
+      description: "invalid hash value type",
+    },
   ];
 
   cases.forEach(({ input, expected, description }) => {
@@ -528,6 +551,91 @@ describe("arrays", () => {
         input: "[1, 2, 3][-1]",
         expected: NULL,
         description: "negative out-of-bounds index",
+      },
+    ];
+
+    cases.forEach(({ input, expected, description }) => {
+      test(`${description}`, () => {
+        const result = evaluateProgram(input);
+        expect(result).toEqual(expected);
+      });
+    });
+  });
+});
+
+describe("hashes", () => {
+  /**
+   * Asserts the actual hash has the expected pairs, where the order of pairs
+   * does not matter.
+   *
+   * We don't directly assert `actual.pairs` to match `HashPairs`, because the
+   * `HashKey` key is an internal mechanism and not exposed to the user.
+   */
+  const expectHashToHavePairs = (actual: Hash, expected: HashPair[]) => {
+    const actualPairs = new Set(actual.pairs.values());
+    const expectedPairs = new Set(expected);
+    expect(actualPairs).toEqual(expectedPairs);
+  };
+
+  test("literals with valid key types", () => {
+    const input = `
+      let two = "two";
+      {
+        "one": 10 - 9,
+        two: 1 + 1,
+        "thr" + "ee": 6 / 2,
+        4: 4,
+        true: 5,
+        false: 6,
+      }`;
+    const result = evaluateProgram(input);
+    expect(result).toBeInstanceOf(Hash);
+    expectHashToHavePairs(result as Hash, [
+      { key: new MString("one"), value: new Integer(1) },
+      { key: new MString("two"), value: new Integer(2) },
+      { key: new MString("three"), value: new Integer(3) },
+      { key: new Integer(4), value: new Integer(4) },
+      { key: new MBoolean(true), value: new Integer(5) },
+      { key: new MBoolean(false), value: new Integer(6) },
+    ]);
+  });
+
+  describe("index expressions", () => {
+    const cases = [
+      {
+        input: '{ "foo": 5 }["foo"]',
+        expected: new Integer(5),
+        description: "string key",
+      },
+      {
+        input: '{"foo": 5}["bar"]',
+        expected: NULL,
+        description: "string key that doesn't exist",
+      },
+      {
+        input: 'let key = "foo"; {"foo": 5}[key]',
+        expected: new Integer(5),
+        description: "identifier as key",
+      },
+      {
+        input: '{}["foo"]',
+        expected: NULL,
+        description: "index on empty hash",
+      },
+      {
+        input: "{5: 5}[5]",
+        expected: new Integer(5),
+        description: "integer as key",
+      },
+      {
+        input: "{true: 5}[true]",
+        expected: new Integer(5),
+        description: "true as key",
+      },
+      {
+        input: "{false: 5}[false]",
+        expected: new Integer(5),
+        description: "false as key",
       },
     ];
 

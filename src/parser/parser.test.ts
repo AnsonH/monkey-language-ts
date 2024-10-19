@@ -605,3 +605,124 @@ test("index expressions", () => {
     ],
   });
 });
+
+describe("hash literals", () => {
+  test("string keys", () => {
+    const input = '{"one": 1, "two": 2, "three": 3}';
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "HashLiteral",
+            pairs: new Map([
+              [
+                { type: "StringLiteral", value: "one" },
+                { type: "IntegerLiteral", value: 1 },
+              ],
+              [
+                { type: "StringLiteral", value: "two" },
+                { type: "IntegerLiteral", value: 2 },
+              ],
+              [
+                { type: "StringLiteral", value: "three" },
+                { type: "IntegerLiteral", value: 3 },
+              ],
+            ]),
+          },
+        },
+      ],
+    });
+  });
+
+  test("empty hash literal", () => {
+    const input = "{}";
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: { type: "HashLiteral", pairs: new Map() },
+        },
+      ],
+    });
+  });
+
+  test("values as expressions", () => {
+    const input = '{"one": 0 + 1, "two": 10 - 8, "three": 15 / 5}';
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "HashLiteral",
+            pairs: new Map([
+              [
+                { type: "StringLiteral", value: "one" },
+                {
+                  type: "InfixExpression",
+                  left: { type: "IntegerLiteral", value: 0 },
+                  operator: "+",
+                  right: { type: "IntegerLiteral", value: 1 },
+                },
+              ],
+              [
+                { type: "StringLiteral", value: "two" },
+                {
+                  type: "InfixExpression",
+                  left: { type: "IntegerLiteral", value: 10 },
+                  operator: "-",
+                  right: { type: "IntegerLiteral", value: 8 },
+                },
+              ],
+              [
+                { type: "StringLiteral", value: "three" },
+                {
+                  type: "InfixExpression",
+                  left: { type: "IntegerLiteral", value: 15 },
+                  operator: "/",
+                  right: { type: "IntegerLiteral", value: 5 },
+                },
+              ],
+            ]),
+          },
+        },
+      ],
+    });
+  });
+
+  test("keys as non-string expressions", () => {
+    const input = '{1: "one", true: 2, fooBar: 3}';
+    const [program] = parseProgram(input);
+    expect(program).toEqual<Program>({
+      type: "Program",
+      statements: [
+        {
+          type: "ExpressionStatement",
+          expression: {
+            type: "HashLiteral",
+            pairs: new Map([
+              [
+                { type: "IntegerLiteral", value: 1 },
+                { type: "StringLiteral", value: "one" },
+              ],
+              [
+                { type: "BooleanLiteral", value: true },
+                { type: "IntegerLiteral", value: 2 },
+              ],
+              [
+                { type: "Identifier", value: "fooBar" },
+                { type: "IntegerLiteral", value: 3 },
+              ],
+            ]),
+          },
+        },
+      ],
+    });
+  });
+});

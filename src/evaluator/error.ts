@@ -42,6 +42,14 @@ export class IndexOperatorNotSupported extends EvaluationError {
   }
 }
 
+export class InvalidHashKeyError extends EvaluationError {
+  name = "InvalidHashKeyError";
+
+  constructor(public key: string) {
+    super(`Hash key must be string, integer, or boolean, got: ${key}`);
+  }
+}
+
 export class NotAFunctionError extends EvaluationError {
   name = "NotAFunctionError";
 

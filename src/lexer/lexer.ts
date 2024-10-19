@@ -111,6 +111,9 @@ class Lexer {
       case ">":
         token = newToken(TokenType.GreaterThan, this.ch);
         break;
+      case ":":
+        token = newToken(TokenType.Colon, this.ch);
+        break;
       case ";":
         token = newToken(TokenType.Semicolon, this.ch);
         break;

@@ -27,6 +27,7 @@ export enum TokenType {
 
   // Delimiters
   Comma = ",",
+  Colon = ":",
   Semicolon = ";",
 
   // Brackets

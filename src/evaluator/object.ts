@@ -57,6 +57,40 @@ export class MFunction implements MObject {
   }
 }
 
+/**
+ * A primitive value representation of `HashPair["key"]`.
+ *
+ * The official Go implementation uses `uint64` because Go does not support mixed
+ * key types in maps. TypeScript does not have this limitation.
+ */
+export type HashKey = string | number | boolean;
+
+export type HashPair = {
+  key: MString | Integer | MBoolean;
+  value: MObject;
+};
+
+export type HashPairs = Map<HashKey, HashPair>;
+
+export class Hash implements MObject {
+  // We don't use `Map<MString | Integer | MBoolean, MObject>` because the keys
+  // are non-primitive values. Getting by key (e.g. `hash.pairs.get(new MString("foo"))`),
+  // would NOT work since the key is a different object instance.
+  public readonly pairs: HashPairs = new Map();
+
+  constructor(pairs: HashPairs) {
+    this.pairs = pairs;
+  }
+
+  inspect(): string {
+    const pairs: string[] = [];
+    for (const { key, value } of this.pairs.values()) {
+      pairs.push(`${key.inspect()}: ${value.inspect()}`);
+    }
+    return `{${pairs.join(", ")}}`;
+  }
+}
+
 export class Integer implements MObject {
   constructor(public readonly value: number) {}
 

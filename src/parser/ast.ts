@@ -16,6 +16,7 @@ export type Expression =
   | BooleanLiteral
   | CallExpression
   | FunctionLiteral
+  | HashLiteral
   | Identifier
   | IfExpression
   | IndexExpression
@@ -66,13 +67,11 @@ export interface BooleanLiteral extends BaseNode {
  */
 export interface CallExpression extends BaseNode {
   type: "CallExpression";
-  /**
-   * Although only `Identifier | FunctionLiteral` expressions are valid, we don't
-   * enforce this constraint in the type definition.
-   *
-   * This means "checking if an expression is callable" is not done by the parser,
-   * but a downstream consumer of the AST (i.e. evaluator).
-   */
+  // Although only `Identifier | FunctionLiteral` expressions are valid, we don't
+  // enforce this constraint in the type definition.
+  //
+  // This means "checking if an expression is callable" is not done by the parser,
+  // but a downstream consumer of the AST (i.e. evaluator).
   function: Expression;
   arguments: Expression[];
 }
@@ -84,6 +83,18 @@ export interface FunctionLiteral extends BaseNode {
   type: "FunctionLiteral";
   parameters: Identifier[];
   body: BlockStatement;
+}
+
+/**
+ * Syntax: `{ <key1>: <value1>, <key2>: <value2>, ... }`
+ *
+ * The only supported data types for keys are strings, integers, and booleans.
+ */
+export interface HashLiteral extends BaseNode {
+  type: "HashLiteral";
+  // We put `Expression` as the key type to allow for dynamic keys. The type
+  // validation of keys will be done during evaluation phase.
+  pairs: Map<Expression, Expression>;
 }
 
 export interface Identifier extends BaseNode {

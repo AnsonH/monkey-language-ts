@@ -54,6 +54,7 @@ if (5 < 10) {
 "if (x < 5)"
 
 [1, 2];
+{"foo": "bar"}
 `;
 
       const lexer = new Lexer(input);
@@ -151,6 +152,12 @@ if (5 < 10) {
         [TokenType.Int, "2"],
         [TokenType.RBracket, "]"],
         [TokenType.Semicolon, ";"],
+
+        [TokenType.LBrace, "{"],
+        [TokenType.String, "foo"],
+        [TokenType.Colon, ":"],
+        [TokenType.String, "bar"],
+        [TokenType.RBrace, "}"],
 
         [TokenType.Eof, ""],
       ];
