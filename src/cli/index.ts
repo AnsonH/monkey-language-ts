@@ -1,7 +1,24 @@
+import { cac } from "cac";
 import { startRepl } from "./repl.js";
+import runFile from "./runFile.js";
 
-function run() {
-  startRepl();
-}
+const APP_NAME = "monkey-ts";
 
-export default run;
+const cli = cac(APP_NAME);
+
+cli
+  .command(
+    "[file]",
+    "Path to a  `*.monkey` file. To run in REPL mode, omit this argument.",
+  )
+  .action((file?: string) => {
+    if (file) {
+      runFile(file);
+    } else {
+      startRepl();
+    }
+  });
+
+cli.help();
+
+cli.parse();

@@ -12,7 +12,9 @@
     "email": "ansonheung2000@gmail.com"
   },
   "type": "module",
-  "main": "./lib/index.js",
+  "bin": {
+    "monkey-ts": "lib/cli.js"
+  },
   "files": [
     "lib/",
     "package.json",
@@ -29,6 +31,9 @@
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"
+  },
+  "dependencies": {
+    "cac": "^6.7.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.0",
