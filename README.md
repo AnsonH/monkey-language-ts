@@ -84,3 +84,8 @@ If you're looking to extend the Monkey language, you can consider:
 - More built-in functions
 - Type system and type annotations
 - Better error reporting (e.g. line and column numbers, better error message)
+
+## Special Thanks
+
+- [Thorsten Ball](https://thorstenball.com/) for writing the book [Writing An Interpreter In Go](https://interpreterbook.com/).
+- [create-typescript-app](https://github.com/JoshuaKGoldberg/create-typescript-app) for the project template.
