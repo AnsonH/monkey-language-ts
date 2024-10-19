@@ -123,6 +123,23 @@ const builtins: Readonly<Record<string, Builtin>> = {
     const [arr, element] = args;
     return new MArray([...arr.elements, element]);
   }),
+
+  /**
+   * Prints the given arguments on new lines to stdout.
+   *
+   * @example
+   * puts("hello", "world");
+   */
+  puts: new Builtin((...args) => {
+    const argsInspected = args.map((arg) => {
+      if (arg instanceof MString) {
+        return arg.value; // Hack to avoid printing the double quotes
+      }
+      return arg.inspect();
+    });
+    console.log(argsInspected.join("\n"));
+    return NULL;
+  }),
 };
 
 export default builtins;
