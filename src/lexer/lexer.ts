@@ -1,7 +1,7 @@
 import { lookupIdent, Token, TokenType } from "./token.js";
 
 /**
- * ASCII code for "NUL", which means either "we haven't read anything yet" or
+ * ASCII code of "NUL", which means either "we haven't read anything yet" or
  * "end of file".
  */
 const NULL = "\0";

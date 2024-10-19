@@ -134,21 +134,32 @@ test("prefix expressions", () => {
   });
 });
 
-// TODO: Use Vitest snapshots
 describe("infix operators", () => {
   const cases = [
-    { input: "5 + 5", description: "adding integers" },
-    // { input: "5 - 5", description: "subtracting integers" },
-    // { input: "5 * 5", description: "multiplying integers" },
-    // { input: "5 / 5", description: "dividing integers" },
-    // { input: "5 > 5", description: "integer greater than integer" },
-    // { input: "5 < 5", description: "integer less then integer" },
-    // { input: "5 == 5", description: "integer equal to integer" },
-    // { input: "5 != 5", description: "integer not equal to integer" },
+    { input: "5 + 5", operator: "+", description: "adding integers" },
+    { input: "5 - 5", operator: "-", description: "subtracting integers" },
+    { input: "5 * 5", operator: "*", description: "multiplying integers" },
+    { input: "5 / 5", operator: "/", description: "dividing integers" },
+    {
+      input: "5 > 5",
+      operator: ">",
+      description: "integer greater than integer",
+    },
+    { input: "5 < 5", operator: "<", description: "integer less than integer" },
+    {
+      input: "5 == 5",
+      operator: "==",
+      description: "integer equal to integer",
+    },
+    {
+      input: "5 != 5",
+      operator: "!=",
+      description: "integer not equal to integer",
+    },
   ];
 
-  cases.forEach(({ input, description }) => {
-    test(`${description}: ${input}`, () => {
+  cases.forEach(({ input, operator, description }) => {
+    test(`${description}`, () => {
       const [program] = parseProgram(input);
       expect(program).toEqual<Program>({
         type: "Program",
@@ -158,7 +169,7 @@ describe("infix operators", () => {
             expression: {
               type: "InfixExpression",
               left: { type: "IntegerLiteral", value: 5 },
-              operator: "+",
+              operator,
               right: { type: "IntegerLiteral", value: 5 },
             },
           },

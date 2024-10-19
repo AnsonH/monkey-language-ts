@@ -96,8 +96,6 @@ export function evaluate(node: Node, env: Environment): MObject {
         return args[0];
       }
 
-      // TODO: Check for ArgumentWrongNumberError
-
       return applyFunction(fn, args);
     }
     case "FunctionLiteral":
@@ -436,7 +434,7 @@ function isError(obj: MObject): obj is EvaluationError {
 /**
  * A value is "truthy" if it is not null and not false.
  *
- * NOTE: Original specs of Monkey considers `0` is truthy.
+ * NOTE: Original specs of Monkey considers `0` as truthy.
  */
 function isTruthy(obj: MObject): boolean {
   return obj !== NULL && obj !== FALSE;

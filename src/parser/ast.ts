@@ -52,6 +52,9 @@ export interface ArrayLiteral extends BaseNode {
   elements: Expression[];
 }
 
+/**
+ * Syntax: `true` or `false`
+ */
 export interface BooleanLiteral extends BaseNode {
   type: "BooleanLiteral";
   value: boolean;
@@ -120,6 +123,7 @@ export interface IfExpression extends BaseNode {
  * Examples:
  * - `arr[0]`
  * - `[0, 1, 2][1 + 1]`
+ * - `{ "foo": "bar" }["foo"]`
  */
 export interface IndexExpression extends BaseNode {
   type: "IndexExpression";
